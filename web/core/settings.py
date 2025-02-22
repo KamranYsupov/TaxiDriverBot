@@ -28,6 +28,9 @@ INSTALLED_APPS = [
     'django_extensions',
     
     # Приложения
+    'web.apps.telegram_users',
+    'web.apps.products',
+    'web.apps.orders',
 ]
 
 MIDDLEWARE = [
