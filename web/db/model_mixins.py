@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from ulid import ULID
@@ -38,7 +39,16 @@ class AbstractTelegramUser(AsyncBaseModel):
         db_index=True,
         null=True,
     )
-    
+
+    rating = models.FloatField(
+        _('Рейтинг'),
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        null=True,
+        blank=True,
+        db_index=True,
+        default=None
+    )
+
     class Meta: 
         abstract = True
     
@@ -52,6 +62,36 @@ class TimestampMixin(models.Model):
         _('Дата последнего обновления'),
         auto_now=True
     )
+
+    class Meta:
+        abstract = True
+
+
+class TariffMixin(models.Model):
+    ECONOMY = 'ECONOMY'
+    COMFORT = 'COMFORT'
+    BUSINESS = 'Business'
+
+    TARIFF_CHOICES = [
+        (ECONOMY, _('Эконом')),
+        (COMFORT, _('Комфорт')),
+        (BUSINESS, _('Бизнес')),
+    ]
+
+    tariff = models.CharField(
+        _('Тариф'),
+        choices=TARIFF_CHOICES,
+        max_length=20,
+        db_index=True,
+        default=ECONOMY
+    )
+
+    class Meta:
+        abstract = True
+
+
+class PriceMixin(models.Model):
+    price = models.PositiveBigIntegerField(_('Стоимость'))
 
     class Meta:
         abstract = True
