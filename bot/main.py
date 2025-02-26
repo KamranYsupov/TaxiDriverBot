@@ -17,7 +17,10 @@ async def main():
     from middlewares.throttling import rate_limit_middleware
     from handlers.routing import get_main_router
 
-    bot = Bot(token=settings.BOT_TOKEN, default=DefaultBotProperties())
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode='HTML'),
+    )
     dp = Dispatcher()
     
     try:

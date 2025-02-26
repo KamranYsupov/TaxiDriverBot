@@ -1,0 +1,49 @@
+
+
+class TaxiDriverStateValidator:
+    """Класс валидатор для TaxiDriverState"""
+    @staticmethod
+    def validate_full_name(value: str) -> bool:
+        if len(value.split()) < 2:
+            return False
+
+        return True
+
+    @staticmethod
+    def validate_passport_data(value: str) -> bool:
+        series, number = value.split()
+        if len(series) != 4 or len(number) != 6 or not series.isdigit() or not number.isdigit():
+            return False
+
+        return True
+
+
+class CarStateValidator:
+    """Класс валидатор для CarState"""
+    @staticmethod
+    def validate_name(value: str) -> bool:
+        if len(value.strip()) < 2:
+            return False
+
+        return True
+
+    @staticmethod
+    def validate_gos_number(value: str) -> bool:
+        if (
+            len(value) != 9 or
+            not value[:1].isalpha() or
+            not value[1:4].isdigit() or
+            not value[4:6].isalpha() or
+            not value[6:].isdigit()
+        ):
+            return False
+
+        return True
+
+    @staticmethod
+    def validate_vin(value: str) -> bool:
+        if len(value) != 17 or not value.isalnum():
+            return False
+
+        return True
+
