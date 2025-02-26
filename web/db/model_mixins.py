@@ -68,14 +68,13 @@ class TimestampMixin(models.Model):
 
 
 class TariffMixin(models.Model):
-    ECONOMY = 'ECONOMY'
-    COMFORT = 'COMFORT'
-    BUSINESS = 'Business'
+    STANDARD = 'Standard'
+    URGENT = 'Urgent'
 
     TARIFF_CHOICES = [
-        (ECONOMY, _('Эконом')),
-        (COMFORT, _('Комфорт')),
-        (BUSINESS, _('Бизнес')),
+        (STANDARD, _('Стандартный')),
+        (URGENT, _('Срочный')),
+
     ]
 
     tariff = models.CharField(
@@ -83,7 +82,7 @@ class TariffMixin(models.Model):
         choices=TARIFF_CHOICES,
         max_length=20,
         db_index=True,
-        default=ECONOMY
+        default=STANDARD
     )
 
     class Meta:

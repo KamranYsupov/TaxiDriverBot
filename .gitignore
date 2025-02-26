@@ -1,3 +1,5 @@
 poetry.lock
 web/db.sqlite3
+web/static
 .env
+web/media/
