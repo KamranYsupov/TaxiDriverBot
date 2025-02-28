@@ -4,6 +4,7 @@ from aiogram import Router, types, F
 
 
 from bot.keyboards.inline import get_inline_keyboard
+from web.apps.orders.models import Order
 from web.apps.telegram_users.models import TelegramUser, TaxiDriver, Car, TariffDriverRequest
 
 router = Router()
@@ -169,8 +170,6 @@ async def request_tariff_callback_handler(callback: types.CallbackQuery):
     if taxi_driver.tariff == tariff:
         return
 
-    print(tariff)
-
     tariff_request_kwargs = dict(
         driver=taxi_driver,
         tariff=tariff,
@@ -188,6 +187,60 @@ async def request_tariff_callback_handler(callback: types.CallbackQuery):
     await callback.message.edit_text(
         message_text,
         reply_markup=get_inline_keyboard(buttons={'Назад 🔙': 'menu_driver'})
+    )
+
+
+@router.callback_query(F.data.startswith('take_order_'))
+async def driver_take_order_callback_handler(callback: types.CallbackQuery):
+    order_id = callback.data.split('_')[-1]
+    order = (await Order.objects.afilter(
+        id=order_id,
+        select_relations=('telegram_user',)
+    ))[0]
+
+    if order.driver:
+        await callback.message.edit_text(
+            'Извини, но кто-то успел принять заказ до тебя',
+            reply_markup=None
+        )
+        return
+
+    taxi_driver: TaxiDriver = (await TaxiDriver.objects.afilter(
+        telegram_id=callback.from_user.id,
+        select_relations=('car', )
+    ))[0]
+
+    order_info_message = (
+        f'<b>Водитель</b>: <em>{taxi_driver.full_name}</em>\n\n'
+        f'<b>Стоимость поездки</b>: <em>{order.price} руб.</em>\n'
+        f'<b>Примерное время поездки</b>: <em>{order.travel_time_minutes} минут</em>\n'
+        f'<b>Машина</b>: <em>{taxi_driver.car.name}</em>\n'
+        f'<b>Номер</b>: <em>{taxi_driver.car.gos_number}</em>\n'
+    )
+    await callback.bot.send_message(
+        chat_id=order.telegram_user.telegram_id,
+        text=order_info_message,
+        reply_markup=get_inline_keyboard(
+            buttons={'Выбрать ☑️': f'accept_order_{order.id}_{taxi_driver.id}'}
+        )
+    )
+
+    await callback.message.edit_text(
+        'Заявка отправлена пользователю ✅\n\n Ожидайте ответа.',
+        reply_markup=None,
+    )
+
+
+@router.callback_query(F.data.startswith('miss_order_'))
+async def driver_miss_order_callback_handler(callback: types.CallbackQuery):
+    order_id = callback.data.split('_')[-1]
+    order = await Order.objects.aget(id=order_id)
+    order.miss_drivers_count += 1
+    await order.asave()
+
+    await callback.message.edit_text(
+        'Заказ отклонён.',
+        reply_markup=None,
     )
 
 

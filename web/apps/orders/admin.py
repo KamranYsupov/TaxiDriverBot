@@ -7,9 +7,8 @@ from .models import (
 
 
 @admin.register(Order)
-class OrderUserAdmin(admin.ModelAdmin):
+class OrderAdmin(admin.ModelAdmin):
     pass
-
 
 @admin.register(Payment)
 class PaymentUserAdmin(admin.ModelAdmin):

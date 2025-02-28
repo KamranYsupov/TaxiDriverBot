@@ -110,12 +110,13 @@ async def process_phone(message: types.Message, state: FSMContext):
 async def process_passport_data(message: types.Message, state: FSMContext):
     passport_data = message.text
 
-    if TaxiDriverStateValidator.validate_passport_data(passport_data):
+    if not TaxiDriverStateValidator.validate_passport_data(passport_data):
+        answer_text = '❌ Неверный формат. Пример: 4510 123456'
+
+    else:
         await state.update_data(passport_data=passport_data)
         await state.set_state(TaxiDriverState.passport_photo)
         answer_text = '📸 Теперь отправьте фото главной страницы паспорта'
-    else:
-        answer_text = '❌ Неверный формат. Пример: 4510 123456'
 
     await message.answer(answer_text)
 

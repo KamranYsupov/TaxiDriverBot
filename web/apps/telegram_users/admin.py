@@ -21,6 +21,7 @@ class TaxiDriverAdmin(admin.ModelAdmin):
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
     readonly_fields = (
+        'driver',
         'name',
         'gos_number',
         'vin',

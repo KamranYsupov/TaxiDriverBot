@@ -22,16 +22,16 @@ async def async_send_order_to_active_drivers(order_id: Order.id):
         )
     )
 
-    order_type = 'Такси' if order.type == OrderType.TAXI else 'Доставка'
+    order_type = 'Такси 🚕' if order.type == OrderType.TAXI else 'Доставка 📦'
     order_message = (
         'Поступил новый заказ!\n\n'
-        f'<b>{order_type}</b>\n'
+        f'<b>Тип:</b> <em>{order_type}</em>\n'
         f'<b>Откуда:</b> <em>{order.from_address}</em>\n'
         f'<b>Куда:</b> <em>{order.to_address}</em>\n\n'
         f'<b>Cтоимость:</b> <em>{order.price} руб.</em>\n'
     )
 
-    if not active_drivers:
+    if not await active_drivers.aexists():
         inline_keyboard = [[
             {'text': 'Взять ✅', 'url': f'{settings.BOT_LINK}?start={order.id}'},
         ]]
