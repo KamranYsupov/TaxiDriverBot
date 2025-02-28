@@ -1,18 +1,16 @@
 import os
-from pyexpat.errors import messages
 
 from aiogram import Router, types, F
-from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from django.core.files.images import ImageFile
 
 from bot.keyboards.inline import get_inline_keyboard, inline_driver_keyboard
-from bot.keyboards.reply import reply_contact_keyboard, reply_keyboard_remove, reply_cancel_keyboard
+from bot.keyboards.reply import reply_keyboard_remove, reply_cancel_keyboard
 from bot.states.taxi_driver import CarState
 from bot.valiators.taxi_driver import CarStateValidator
 
 from web.apps.telegram_users.models import TelegramUser, TaxiDriver, Car
-from web.services.telegram_service import async_telegram_service
+from web.services.telegram import async_telegram_service
 
 router = Router()
 
@@ -109,12 +107,7 @@ async def process_photo(message: types.Message, state: FSMContext):
     )
     car_photo_id = message.photo[-1].file_id
     data = await state.get_data()
-    save_path = 'some_photo.jpg'
 
-    await async_telegram_service.save_file(
-        file_id=car_photo_id,
-        save_path=save_path
-    )
     car_data = {
         'name': data['name'],
         'gos_number': data['gos_number'],
@@ -122,6 +115,12 @@ async def process_photo(message: types.Message, state: FSMContext):
     }
     car = Car(**car_data)
 
+    save_path = f'{car.name}.jpg'
+
+    await async_telegram_service.save_file(
+        file_id=car_photo_id,
+        save_path=save_path
+    )
 
     with open(save_path, 'rb') as file:
         car.photo = ImageFile(file)
@@ -134,9 +133,9 @@ async def process_photo(message: types.Message, state: FSMContext):
     await message.answer_photo(
         photo=car_photo_id,
         caption=f'Ожидайте. Авто на проверке.\n\n'
-                f'Название: {car.name}\n'
-                f'Гос. номер: {car.gos_number}\n'
-                f'VIN: {car.vin}',
+                f'<b>Название</b>: {car.name}\n'
+                f'<b>Гос. номер</b>: {car.gos_number}\n'
+                f'<b>VIN</b>: {car.vin}',
         reply_markup=reply_keyboard_remove
     )
 

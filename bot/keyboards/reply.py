@@ -29,10 +29,22 @@ def get_reply_contact_keyboard(
     ]
     
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-    
-    
+
+
+def get_reply_location_keyboard(
+        text: str = 'Отправить геолокацию 🏬'
+) -> ReplyKeyboardMarkup:
+    keyboard = [
+        [KeyboardButton(text=text, request_location=True)],
+        [KeyboardButton(text='Отмена ❌')]
+    ]
+
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+
+
 reply_cancel_keyboard = get_reply_keyboard(buttons=('Отмена ❌',))
 reply_keyboard_remove = ReplyKeyboardRemove()
 reply_contact_keyboard = get_reply_contact_keyboard()
+reply_location_keyboard = get_reply_location_keyboard()
 
     

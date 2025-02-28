@@ -13,13 +13,21 @@ def get_inline_keyboard(*, buttons: Dict[str, str], sizes: Tuple = (1, 2)):
 
 inline_driver_keyboard = get_inline_keyboard(
     buttons={
-        'Смена 🧭': 'in_work',
+        'Смена 🧭': 'is_active',
         'Авто 🚖': 'car',
         'Детское кресло 🪑' : 'child_chair',
-        'Тариф 💵': 'tariff',
+        'Тариф 💵': 'driver_tariff',
         'Статистика 📊': 'statistic'
     },
     sizes=(1, 1, 1, 1, 1)
+)
+
+inline_user_keyboard = get_inline_keyboard(
+    buttons={
+        'Заказать 🚖': 'order',
+        'Маркет 📦': 'market',
+        'Тариф 💵': 'change_tariff',
+    }
 )
 
 inline_cancel_keyboard = get_inline_keyboard(

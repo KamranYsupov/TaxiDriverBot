@@ -26,6 +26,10 @@ class RouteModeEnum(Enum):
     SHORTEST = 'shortest'
 
 
+class API2GisError(ValueError):
+    pass
+
+
 class API2GisService:
     """2GIS API Servie"""
     def __init__(self, api_key: str = settings.API_2GIS_KEY):
@@ -48,11 +52,11 @@ class API2GisService:
         response_data = response.json()
 
         if 'result' not in response_data or not response_data['result']['items']:
-            raise ValueError(f'Адрес не найден: {address}')
+            raise API2GisError(f'Адрес не найден: {address}')
 
         if return_data:
             return response_data
-        # Берем первый результат из списка
+
         lat = response_data['result']['items'][0]['point']['lat']
         lon = response_data['result']['items'][0]['point']['lon']
 
@@ -60,16 +64,16 @@ class API2GisService:
 
     def get_route_distance_and_duration(
             self,
-            lat_1: float,
-            lon_1: float,
-            lat_2: float,
-            lon_2: float,
+            from_lat: float,
+            from_lon: float,
+            to_lat: float,
+            to_lon: float,
             route_mode: RouteModeEnum = RouteModeEnum.FASTEST,
             traffic_mode: TrafficModeEnum = TrafficModeEnum.JAM,
             transport: TransportEnum = TransportEnum.TAXI,
             return_data: bool = False,
     ) -> Union[Tuple[float, float], Dict]:
-        """Рассчитывает расстояние по дорогам между двумя точками."""
+        """Рассчитывает расстояние и продолжительность пути по дорогам между двумя точками."""
 
         url = 'http://routing.api.2gis.com/routing/7.0.0/global'
         params = {
@@ -78,19 +82,19 @@ class API2GisService:
         payload = {
             'points': [
                 {
-                    'lat': lat_1,
-                    'lon': lon_1,
+                    'lat': from_lat,
+                    'lon': from_lon,
                     'type': 'stop',
                 },
                 {
-                    'lat': lat_2,
-                    'lon': lon_2,
+                    'lat': to_lat,
+                    'lon': to_lon,
                     'type': 'stop',
                 }
             ],
-            'route_mode': route_mode,
-            'traffic_mode': traffic_mode,
-            'transport': transport,
+            'route_mode': route_mode.value,
+            'traffic_mode': traffic_mode.value,
+            'transport': transport.value,
             'output': 'summary'
         }
 
@@ -102,7 +106,7 @@ class API2GisService:
         response_data = response.json()
 
         if 'result' not in response_data:
-            raise ValueError('Ошибка при расчете маршрута')
+            raise API2GisError('Ошибка при расчете маршрута')
 
         if return_data:
             return response_data
@@ -133,7 +137,7 @@ class API2GisService:
         response_data = response.json()
 
         if 'result' not in response_data or not response_data['result']['items']:
-            raise ValueError('Адрес не найден для данных координат')
+            raise API2GisError('Адрес не найден для данных координат')
 
         if return_data:
             return response_data
@@ -144,3 +148,6 @@ class API2GisService:
 
         address_string = f'{city}, {street_and_house}' # Город, Улица, Дом
         return address_string
+
+
+api_2gis_service = API2GisService()

@@ -37,11 +37,12 @@ class AsyncBaseManager(models.Manager):
         self,
         select_relations: Sequence[str] = [],
         prefetch_relations: Sequence[str] = [],
+        *args,
         **kwargs
     ) -> List:
         return list(
             super()
-            .filter(**kwargs)
+            .filter(*args, **kwargs)
             .select_related(*select_relations)
             .prefetch_related(*prefetch_relations)
         )

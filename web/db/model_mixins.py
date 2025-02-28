@@ -72,9 +72,8 @@ class TariffMixin(models.Model):
     URGENT = 'Urgent'
 
     TARIFF_CHOICES = [
-        (STANDARD, _('Стандартный')),
-        (URGENT, _('Срочный')),
-
+        (STANDARD, 'Стандартный'),
+        (URGENT, 'Срочный'),
     ]
 
     tariff = models.CharField(
@@ -91,6 +90,28 @@ class TariffMixin(models.Model):
 
 class PriceMixin(models.Model):
     price = models.PositiveBigIntegerField(_('Стоимость'))
+
+    class Meta:
+        abstract = True
+
+
+class RequestStatusMixin(models.Model):
+    APPROVED = 'Approved'
+    DISAPPROVED = 'Disapproved'
+    WAITING = 'Waiting'
+
+    STATUS_CHOICES = [
+        (APPROVED, 'Одобрен'),
+        (DISAPPROVED, 'Не одобрен'),
+        (WAITING, 'Ожидает')
+    ]
+
+    status = models.CharField(
+        _('Статус'),
+        choices=STATUS_CHOICES,
+        max_length=20,
+        default=WAITING,
+    )
 
     class Meta:
         abstract = True

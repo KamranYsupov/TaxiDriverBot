@@ -14,10 +14,7 @@ class TelegramService:
     ):
         self.__bot_token = bot_token
         self.api_url = api_url
-
-    @property
-    def __bot_api_url(self):
-        return f'{self.api_url}/bot{self.__bot_token}'
+        self.__bot_api_url = f'{api_url}/bot{bot_token}'
 
     def send_message(
             self,

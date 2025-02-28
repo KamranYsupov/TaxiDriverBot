@@ -20,6 +20,8 @@ python-ulid = "^3.0.0"
 requests = "^2.32.3"
 pillow = "^11.1.0"
 watchdog = "^6.0.0"
+celery = "^5.4.0"
+gevent = "^24.11.1"
 
 
 

@@ -1,3 +1,16 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import (
+    Order,
+    Payment
+)
+
+
+@admin.register(Order)
+class OrderUserAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Payment)
+class PaymentUserAdmin(admin.ModelAdmin):
+    pass

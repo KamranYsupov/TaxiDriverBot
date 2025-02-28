@@ -1,17 +1,17 @@
 import os
 
 from aiogram import Router, types, F
-from aiogram.filters import CommandStart, Command, StateFilter
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from django.core.files.images import ImageFile
 
-from bot.keyboards.inline import get_inline_keyboard, inline_driver_keyboard
+from bot.keyboards.inline import get_inline_keyboard, inline_driver_keyboard, inline_user_keyboard
 from bot.keyboards.reply import reply_contact_keyboard, reply_keyboard_remove, reply_cancel_keyboard
 from bot.states.taxi_driver import TaxiDriverState
 from bot.valiators.taxi_driver import TaxiDriverStateValidator
 
 from web.apps.telegram_users.models import TelegramUser, TaxiDriver
-from web.services.telegram_service import async_telegram_service
+from web.services.telegram import async_telegram_service
 
 router = Router()
 
@@ -45,12 +45,7 @@ async def menu_callback_query_handler(
 
         await callback.message.edit_text(
             message_text,
-            reply_markup=get_inline_keyboard(
-                buttons={
-                'Заказать': 'order',
-                'Маркет': 'market',
-                'Тариф': 'change_tariff',
-            })
+            reply_markup=inline_user_keyboard,
         )
         return
 
@@ -129,12 +124,6 @@ async def process_passport_data(message: types.Message, state: FSMContext):
 async def process_passport_photo(message: types.Message, state: FSMContext):
     passport_photo_file_id = message.photo[-1].file_id
     data = await state.get_data()
-    save_path = 'some_photo.jpg'
-
-    await async_telegram_service.save_file(
-        file_id=passport_photo_file_id,
-        save_path=save_path
-    )
 
     taxi_driver_data = {
         'telegram_id': message.from_user.id,
@@ -145,6 +134,13 @@ async def process_passport_photo(message: types.Message, state: FSMContext):
     }
     taxi_driver = TaxiDriver(**taxi_driver_data)
 
+    save_path = f'{taxi_driver.full_name}.jpg'
+
+    await async_telegram_service.save_file(
+        file_id=passport_photo_file_id,
+        save_path=save_path
+    )
+
     with open(save_path, 'rb') as file:
         taxi_driver.passport_photo = ImageFile(file)
         await taxi_driver.asave()
@@ -154,7 +150,11 @@ async def process_passport_photo(message: types.Message, state: FSMContext):
 
     await message.answer(
         '✅ Регистрация завершена!',
-        reply_markup=inline_driver_keyboard
+        reply_markup=reply_keyboard_remove,
+    )
+    await message.answer(
+        'Выберите действие.',
+        reply_markup=inline_driver_keyboard,
     )
 
 
