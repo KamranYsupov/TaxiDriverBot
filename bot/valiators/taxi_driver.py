@@ -29,19 +29,6 @@ class CarStateValidator:
         return True
 
     @staticmethod
-    def validate_gos_number(value: str) -> bool:
-        if (
-            len(value) != 9 or
-            not value[:1].isalpha() or
-            not value[1:4].isdigit() or
-            not value[4:6].isalpha() or
-            not value[6:].isdigit()
-        ):
-            return False
-
-        return True
-
-    @staticmethod
     def validate_vin(value: str) -> bool:
         if len(value) != 17 or not value.isalnum():
             return False

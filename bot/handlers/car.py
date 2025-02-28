@@ -70,11 +70,7 @@ async def process_name(message: types.Message, state: FSMContext):
 
 @router.message(CarState.gos_number)
 async def process_gos_number(message: types.Message, state: FSMContext):
-    gos_number = message.text.upper().strip()
-    if not CarStateValidator.validate_gos_number(gos_number):
-        await message.answer('❌ Неверный формат номера. Пример: А123АА123')
-        return
-
+    gos_number = message.text
     if await Car.objects.afilter(gos_number=gos_number, status=Car.APPROVED):
         await message.answer('❌ Авто с таким номером уже существует')
         return
