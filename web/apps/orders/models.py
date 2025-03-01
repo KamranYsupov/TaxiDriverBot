@@ -86,7 +86,7 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
             to_lat=self.to_latitude,
             to_lon=self.to_longitude,
         )
-        self.travel_time_minutes = travel_length_meters / 1000
+        self.travel_length_km = travel_length_meters / 1000
         self.travel_time_minutes = round(travel_time_seconds / 60)
         self.price = self.calculate_price()
         self.current_active_drivers_count = TaxiDriver.objects.filter(is_active=True).count()
