@@ -1,25 +1,11 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from ulid import ULID
 
 from .base_manager import AsyncBaseManager
         
         
-def ulid_default() -> str:
-    return str(ULID())
-        
-        
 class AsyncBaseModel(models.Model):
-    id = models.CharField( 
-        primary_key=True,
-        default=ulid_default,
-        max_length=26,
-        editable=False,
-        unique=True,
-        db_index=True,
-    )
-    
     objects = AsyncBaseManager()
     
     class Meta: 
