@@ -12,6 +12,7 @@ from web.db.model_mixins import (
     PriceMixin,
     SingletonModel
 )
+from web.db.models import PriceField
 from web.services.api_2gis import api_2gis_service
 
 
@@ -156,15 +157,15 @@ class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
 class OrderPriceSettings(AsyncBaseModel, SingletonModel):
     """Singelton модель настроек для расчета стоимости заказа"""
 
-    default_order_price = models.PositiveBigIntegerField(
+    default_order_price = PriceField(
         _('Стоимость подачи'),
         default=0
     )
-    price_for_km = models.PositiveBigIntegerField(
+    price_for_km = PriceField(
         _('Стоимость за километр'),
         default=0
     )
-    price_for_travel_minute = models.PositiveBigIntegerField(
+    price_for_travel_minute = PriceField(
         _('Стоимость за минуту пути'),
         default=0
     )

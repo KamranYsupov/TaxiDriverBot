@@ -3,8 +3,9 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .base_manager import AsyncBaseManager
-        
-        
+from .models import PriceField
+
+
 class AsyncBaseModel(models.Model):
     objects = AsyncBaseManager()
     
@@ -95,7 +96,7 @@ class TariffMixin(models.Model):
 
 
 class PriceMixin(models.Model):
-    price = models.PositiveBigIntegerField(_('Стоимость'))
+    price = PriceField(_('Стоимость'))
 
     class Meta:
         abstract = True
