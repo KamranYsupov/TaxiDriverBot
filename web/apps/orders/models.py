@@ -112,7 +112,7 @@ class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
     TYPE_CHOICES.append((PRODUCT, _('Товар')))
 
     type = models.CharField(
-        _('Тип поездки'),
+        _('Тип оплаты'),
         choices=TYPE_CHOICES,
         max_length=15,
     )
