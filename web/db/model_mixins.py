@@ -53,6 +53,26 @@ class TimestampMixin(models.Model):
         abstract = True
 
 
+class SingletonModel(models.Model):
+    """Singelton модель"""
+
+    def save(self, *args, **kwargs):
+        if self.__class__.objects.count() == 0:
+            super().save(*args, **kwargs)
+        else:
+            existing = self.__class__.objects.get()
+            self.id = existing.id
+            super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    class Meta:
+        abstract = True
+
+
 class TariffMixin(models.Model):
     STANDARD = 'Standard'
     URGENT = 'Urgent'
