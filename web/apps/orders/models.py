@@ -1,6 +1,6 @@
 from copy import copy
 
-from celery.utils.functional import pass1
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -41,7 +41,8 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
         default=OrderType.TAXI,
         max_length=15,
     )
-    travel_time_minutes = models.PositiveIntegerField(_('Примерное время поезки'))
+    travel_length_km = models.FloatField(_('Длина пути в км'), validators=[MaxValueValidator])
+    travel_time_minutes = models.PositiveIntegerField(_('Примерное время поездки в минутах'))
 
     current_active_drivers_count = models.PositiveIntegerField(
         _('Количесто активных водителей в момент создания заказа'),
@@ -79,16 +80,27 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
         return f'{self.type}: {self.from_address} - {self.to_address}'
 
     def save(self, *args, **kwargs):
-        _, travel_time_seconds = api_2gis_service.get_route_distance_and_duration(
+        travel_length_meters, travel_time_seconds = api_2gis_service.get_route_distance_and_duration(
             from_lat=self.from_latitude,
             from_lon=self.from_longitude,
             to_lat=self.to_latitude,
             to_lon=self.to_longitude,
         )
+        self.travel_time_minutes = travel_length_meters / 1000
         self.travel_time_minutes = round(travel_time_seconds / 60)
-        self.price = 100.0
+        self.price = self.calculate_price()
         self.current_active_drivers_count = TaxiDriver.objects.filter(is_active=True).count()
         super().save(*args, **kwargs)
+
+    def calculate_price(self):
+        price_settings: OrderPriceSettings = OrderPriceSettings.load()
+        price = (
+            price_settings.default_order_price + (
+                price_settings.price_for_km * self.travel_length_km +
+                price_settings.price_for_travel_minute * self.travel_time_minute
+            )
+        )
+        return price
 
 
 class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):

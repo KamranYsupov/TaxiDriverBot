@@ -12,6 +12,7 @@ from web.admin import SingletonModelAdmin
 class OrderAdmin(admin.ModelAdmin):
     pass
 
+
 @admin.register(Payment)
 class PaymentUserAdmin(admin.ModelAdmin):
     pass
