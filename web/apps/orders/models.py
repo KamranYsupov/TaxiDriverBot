@@ -144,6 +144,10 @@ class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
 class OrderPriceSettings(AsyncBaseModel, SingletonModel):
     """Singelton модель настроек для расчета стоимости заказа"""
 
+    default_order_price = models.PositiveBigIntegerField(
+        _('Стоимость подачи'),
+        default=0
+    )
     price_for_km = models.PositiveBigIntegerField(
         _('Стоимость за километр'),
         default=0
