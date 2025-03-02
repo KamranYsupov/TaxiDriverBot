@@ -1,8 +1,9 @@
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
 from asgiref.sync import sync_to_async
+from django.conf import settings
 from django.db import transaction
 
 from bot.keyboards.inline import get_inline_keyboard
@@ -10,8 +11,8 @@ from bot.keyboards.reply import reply_cancel_keyboard, reply_location_keyboard
 from bot.states.order import OrderState
 from bot.utils.texts import address_string
 from bot.valiators.taxi_driver import OrderStateValidator
-from web.apps.orders.models import Order
-from web.apps.telegram_users.models import TelegramUser
+from web.apps.orders.models import Order, Payment
+from web.apps.telegram_users.models import TelegramUser, TaxiDriver
 from web.services.api_2gis import api_2gis_service, API2GisError
 
 router = Router()
@@ -33,7 +34,7 @@ async def choice_order_type_callback_handler(callback: types.CallbackQuery, stat
         )
     )
 
-# Обработчик для выбора типа заказа
+
 @router.callback_query(F.data.startswith('order_'))
 async def process_order_type_callback_handler(callback: types.CallbackQuery, state: FSMContext):
     order_type = callback.data.split('_')[-1].capitalize()
@@ -71,6 +72,8 @@ async def process_from_address(message: types.Message, state: FSMContext):
 
 @router.message(OrderState.to_address)
 async def process_to_address(message: types.Message, state: FSMContext):
+    await message.answer('Анализирую маршрут . . .')
+
     telegram_user = await TelegramUser.objects.aget(telegram_id=message.from_user.id)
     state_data = await state.get_data()
 
@@ -102,11 +105,29 @@ async def process_to_address(message: types.Message, state: FSMContext):
         await message.answer(str(e))
         return
 
-    await message.answer('Поиск водителей...')
+    await message.answer('Поиск водителей . . .')
     await state.clear()
 
 
-@router.message(Command('cancel'), ~StateFilter(default_state))
-async def cancel_order(message: types.Message, state: FSMContext):
-    await state.clear()
-    await message.answer('Заказ отменен!')
+@router.callback_query(F.data.startswith('accept_order_'))
+async def accept_order__callback_handler(callback: types.CallbackQuery):
+    order_id, driver_id = callback.data.split('_')[-2:]
+    order: Order = await Order.objects.aget(id=order_id)
+    taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(id=driver_id)
+
+    order.driver = taxi_driver
+    await order.asave()
+
+    await callback.message.edit_reply_markup(
+        inline_message_id=callback.inline_message_id,
+        reply_markup=None,
+    )
+    await callback.bot.send_invoice(
+        chat_id=callback.message.chat.id,
+        title='Оплата поездки',
+        description='После оплаты водитель направиться к вам.',
+        payload=f'order_{order.id}',
+        provider_token=settings.YOOKASSA_PAYMENT_TOKEN,
+        currency='RUB',
+        prices=[types.LabeledPrice(label='Оплата поездки', amount=int(order.price * 100))],  # в копейках
+    )

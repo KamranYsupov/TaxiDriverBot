@@ -29,6 +29,13 @@ class CarStateValidator:
         return True
 
     @staticmethod
+    def validate_gos_number(value: str) -> bool:
+        if len(value) > 20:
+            return False
+
+        return True
+
+    @staticmethod
     def validate_vin(value: str) -> bool:
         if len(value) != 17 or not value.isalnum():
             return False

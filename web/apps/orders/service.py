@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import Q
 
+from bot.utils.texts import get_order_info_message
 from web.services.telegram import async_telegram_service
 from web.apps.telegram_users.models import TaxiDriver, TelegramUser
 from web.apps.orders.models import Order, OrderType
@@ -21,15 +22,7 @@ async def async_send_order_to_active_drivers(order_id: Order.id):
             is_active=True
         )
     )
-
-    order_type = 'Такси 🚕' if order.type == OrderType.TAXI else 'Доставка 📦'
-    order_message = (
-        'Поступил новый заказ!\n\n'
-        f'<b>Тип:</b> <em>{order_type}</em>\n'
-        f'<b>Откуда:</b> <em>{order.from_address}</em>\n'
-        f'<b>Куда:</b> <em>{order.to_address}</em>\n\n'
-        f'<b>Cтоимость:</b> <em>{order.price} руб.</em>\n'
-    )
+    order_message = 'Поступил новый заказ!\n\n' + get_order_info_message(order)
 
     if not await active_drivers.aexists():
         inline_keyboard = [[

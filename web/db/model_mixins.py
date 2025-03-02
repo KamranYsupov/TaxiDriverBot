@@ -35,11 +35,23 @@ class AbstractTelegramUser(AsyncBaseModel):
         db_index=True,
         default=None
     )
+    reviews: list = models.JSONField(default=list)
 
     class Meta: 
         abstract = True
-    
-    
+
+    def save(self, *args, **kwargs):
+        self._update_rating()
+        super().save(*args, **kwargs)
+
+    async def asave(self, *args, **kwargs):
+        self._update_rating()
+        await super().asave(*args, **kwargs)
+
+    def _update_rating(self):
+        self.rating = round(sum(self.reviews) / len(self.reviews), 1)
+
+
 class TimestampMixin(models.Model):
     created_at = models.DateTimeField(
         _('Дата создания'),

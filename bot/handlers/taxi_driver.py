@@ -3,9 +3,19 @@ from typing import Optional
 from aiogram import Router, types, F
 
 
-from bot.keyboards.inline import get_inline_keyboard
+from bot.keyboards.inline import (
+    get_inline_keyboard,
+    get_inline_review_telegram_user_keyboard,
+    get_inline_review_driver_keyboard
+)
+from bot.utils.texts import get_order_info_message
 from web.apps.orders.models import Order
-from web.apps.telegram_users.models import TelegramUser, TaxiDriver, Car, TariffDriverRequest
+from web.apps.telegram_users.models import (
+    TelegramUser,
+    TaxiDriver,
+    Car,
+    TariffDriverRequest
+)
 
 router = Router()
 
@@ -210,13 +220,16 @@ async def driver_take_order_callback_handler(callback: types.CallbackQuery):
         select_relations=('car', )
     ))[0]
 
+    driver_rating = f'{taxi_driver.rating} ⭐️' if taxi_driver.rating else 'нет оценки'
     order_info_message = (
-        f'<b>Водитель</b>: <em>{taxi_driver.full_name}</em>\n\n'
+        f'<b>Водитель</b>: <em>{taxi_driver.full_name}</em> '
+        f'<b>({driver_rating})</b>\n\n'
         f'<b>Стоимость поездки</b>: <em>{order.price} руб.</em>\n'
         f'<b>Примерное время поездки</b>: <em>{order.travel_time_minutes} минут</em>\n'
         f'<b>Машина</b>: <em>{taxi_driver.car.name}</em>\n'
         f'<b>Номер</b>: <em>{taxi_driver.car.gos_number}</em>\n'
     )
+
     await callback.bot.send_message(
         chat_id=order.telegram_user.telegram_id,
         text=order_info_message,
@@ -244,9 +257,62 @@ async def driver_miss_order_callback_handler(callback: types.CallbackQuery):
     )
 
 
+@router.callback_query(F.data.startswith('end_order'))
+async def end_order_callback_handler(callback: types.CallbackQuery):
+    order_id = callback.data.split('_')[-1]
+
+    await callback.message.edit_text(
+        '<b>Вы уверены?</b>',
+        reply_markup=get_inline_keyboard(
+            buttons={
+                'Да': f'confirm_end_order_{order_id}',
+                'Нет': f'cancel_end_order_{order_id}'
+            }
+        )
+    )
 
 
+@router.callback_query(F.data.startswith('cancel_end_order_'))
+async def cancel_end_order_callback_handler(callback: types.CallbackQuery):
+    order_id = callback.data.split('_')[-1]
+    order: Order = await Order.objects.aget(id=order_id)
+    order_info_message = get_order_info_message(order)
 
+    await callback.message.edit_text(
+        order_info_message,
+        reply_markup=get_inline_keyboard(
+            buttons={'Завершить заказ': f'end_order_{order.id}'}
+        )
+    )
+
+
+@router.callback_query(F.data.startswith('confirm_end_order_'))
+async def confirm_end_order_callback_handler(callback: types.CallbackQuery):
+    order_id = callback.data.split('_')[-1]
+    order: Order = await Order.objects.aget(id=order_id)
+    taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(id=order.driver_id)
+    order_telegram_user: TelegramUser = await TelegramUser.objects.aget(
+        id=order.telegram_user_id
+    )
+
+    await callback.message.edit_text(
+        'Заказ завершен ✅',
+        reply_markup=None,
+    )
+    await callback.message.answer(
+        'Пожалуйста, оцените пассажира',
+        reply_markup=get_inline_review_telegram_user_keyboard(
+            telegram_user_id=order_telegram_user.id
+        )
+    )
+
+    await callback.bot.send_message(
+        chat_id=order_telegram_user.telegram_id,
+        text='Пожалуйста, оцените водителя',
+        reply_markup=get_inline_review_driver_keyboard(
+            driver_id=taxi_driver.id
+        )
+    )
 
 
 

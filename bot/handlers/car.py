@@ -60,7 +60,7 @@ async def add_car_callback_handler(
 @router.message(CarState.name, F.text)
 async def process_name(message: types.Message, state: FSMContext):
     if len(message.text.strip()) < 2:
-        await message.answer(' Имя должно содержать минимум 2 символа')
+        await message.answer('Имя должно содержать минимум 2 символа')
         return
 
     await state.update_data(name=message.text.strip())
@@ -71,6 +71,11 @@ async def process_name(message: types.Message, state: FSMContext):
 @router.message(CarState.gos_number)
 async def process_gos_number(message: types.Message, state: FSMContext):
     gos_number = message.text
+
+    if not CarStateValidator.validate_gos_number(gos_number):
+        await message.answer('❌ Некорректный номер')
+        return
+
     if await Car.objects.afilter(gos_number=gos_number, status=Car.APPROVED):
         await message.answer('❌ Авто с таким номером уже существует')
         return

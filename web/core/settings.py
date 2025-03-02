@@ -64,11 +64,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'web.core.wsgi.application'
 
 
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASS'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT', 5432),
     }
 }
 
@@ -111,6 +114,8 @@ BOT_LINK = f'https://t.me/{BOT_USERNAME}'
 MAX_MESSAGE_PER_SECOND = int(os.getenv('MAX_MESSAGE_PER_SECOND', 1))
 PRIVATE_ORDERS_CHANNEL_LINK = os.getenv('PRIVATE_ORDERS_CHANNEL_LINK')
 PRIVATE_ORDERS_CHANNEL_ID = os.getenv('PRIVATE_ORDERS_CHANNEL_ID')
+
+YOOKASSA_PAYMENT_TOKEN = os.getenv('YOOKASSA_PAYMENT_TOKEN')
 
 API_2GIS_KEY = os.getenv('API_2GIS_KEY')
 

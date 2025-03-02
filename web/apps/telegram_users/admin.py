@@ -10,12 +10,30 @@ from .models import (
 
 @admin.register(TelegramUser)
 class TelegramUserAdmin(admin.ModelAdmin):
-    pass
+    fields = (
+        'telegram_id',
+        'username',
+        'rating_display',
+        'tariff',
+    )
+   # exclude = ('reviews', )
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description='Оценка')
+    def rating_display(self, obj):
+        return f'{obj.rating} ⭐'
 
 
 @admin.register(TaxiDriver)
 class TaxiDriverAdmin(admin.ModelAdmin):
-    pass
+    fields = ('rating_display', 'reviews')
+    readonly_fields = ('rating_display', )
+
+    @admin.display(description='Оценка')
+    def rating_display(self, obj):
+        return f'{obj.rating} ⭐'
 
 
 @admin.register(Car)
