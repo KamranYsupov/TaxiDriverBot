@@ -12,7 +12,7 @@ from web.services.telegram import telegram_service
 
 class TelegramUser(AbstractTelegramUser, TariffMixin):
     """Модель telegram пользователя(заказчика)"""
-    points = models.PositiveBigIntegerField(_('Баллы'), default=0)
+    points = models.PositiveBigIntegerField(_('Баллы'), default=200)
 
     class Meta:
         verbose_name = _('пользователь')
