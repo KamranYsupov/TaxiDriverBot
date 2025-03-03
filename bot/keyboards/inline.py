@@ -54,7 +54,6 @@ inline_driver_keyboard = get_inline_keyboard(
     buttons={
         'Смена 🧭': 'is_active',
         'Авто 🚖': 'car',
-        'Детское кресло 🪑' : 'child_chair',
         'Тариф 💵': 'driver_tariff',
         'Статистика 📊': 'statistic_1'
     },

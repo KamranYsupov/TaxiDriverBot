@@ -65,34 +65,6 @@ async def is_tariff_request_approved_handler(
         )
     )
 
-@router.callback_query(F.data == 'child_chair')
-async def child_chair_callback_handler(callback: types.CallbackQuery):
-    taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(
-        telegram_id=callback.from_user.id,
-    )
-    car: Car = await Car.objects.aget(driver=taxi_driver)
-
-    if not await is_car_approved_handler(callback, car):
-        return
-
-    button_text = 'Включить ✅' if not taxi_driver.child_chair else 'Выключить ❌'
-    message_text = (
-        'Детское кресло: '
-        f'<b>{"включено ✅" if taxi_driver.child_chair else "выключено ❌"}</b>'
-    )
-    buttons = {
-        button_text: 'driver_change-child_chair',
-        'Назад 🔙': 'menu_driver',
-    }
-
-    await callback.message.edit_text(
-        message_text,
-        reply_markup=get_inline_keyboard(
-            buttons=buttons,
-            sizes=(1, 1, 1)
-        ),
-    )
-
 
 @router.callback_query(F.data == 'is_active')
 async def is_active_callback_handler(callback: types.CallbackQuery):
@@ -126,20 +98,18 @@ async def is_active_callback_handler(callback: types.CallbackQuery):
 @router.callback_query(F.data.startswith('driver_change-'))
 async def driver_change_field_callback_handler(callback: types.CallbackQuery):
     change_field_name = callback.data.split('-')[-1]
-    if change_field_name not in ('child_chair', 'is_active'):
+    if change_field_name not in ('is_active', ):
         return
 
     taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(
         telegram_id=callback.from_user.id,
     )
     change_field_value = getattr(taxi_driver, change_field_name)  # Достаём значение нужного поля
-    setattr(taxi_driver, change_field_name, not change_field_value)  # Изменяем значение нужного поля
+    setattr(taxi_driver, change_field_name, not change_field_value)  # Изменяем значение нужного поля на противоположное
 
     await taxi_driver.asave()
 
-    if change_field_name == 'child_chair':
-        await child_chair_callback_handler(callback)
-    elif change_field_name == 'is_active':
+    if change_field_name == 'is_active':
         await is_active_callback_handler(callback)
 
 

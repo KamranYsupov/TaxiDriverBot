@@ -68,7 +68,6 @@ class TaxiDriver(AbstractTelegramUser, TariffMixin):
     phone_number = models.CharField(_('Номер телефона'), max_length=50, unique=True)
     passport_data = models.CharField(_('Паспортные данные'), max_length=30)
     passport_photo = models.ImageField(_('Фото паспорта'), upload_to='passports/')
-    child_chair = models.BooleanField(_('Детское кресло'), default=False)
     is_active = models.BooleanField(_('Работает'), default=False)
 
     car = models.OneToOneField(
