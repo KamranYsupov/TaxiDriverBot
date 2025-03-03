@@ -49,6 +49,9 @@ class AbstractTelegramUser(AsyncBaseModel):
         await super().asave(*args, **kwargs)
 
     def _update_rating(self):
+        if not self.reviews:
+            return
+
         self.rating = round(sum(self.reviews) / len(self.reviews), 1)
 
 

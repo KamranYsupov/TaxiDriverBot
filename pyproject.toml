@@ -21,6 +21,7 @@ pillow = "^11.1.0"
 watchdog = "^6.0.0"
 celery = "^5.4.0"
 gevent = "^24.11.1"
+redis = "^5.2.1"
 
 
 

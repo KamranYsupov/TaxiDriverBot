@@ -36,7 +36,7 @@ async def pre_checkout(pre_checkout_query: types.PreCheckoutQuery, bot: Bot):
 async def process_successful_payment(message: types.Message):
     invoice_payload = message.successful_payment.invoice_payload
     obj_id = invoice_payload.split('_')[-1]
-    message_text = (
+    text = (
         f'Платеж на сумму {message.successful_payment.total_amount // 100} '
         f'руб. прошел успешно ✅\n'
     )
@@ -50,7 +50,7 @@ async def process_successful_payment(message: types.Message):
         obj: Order = await Order.objects.aget(id=obj_id)
         payment_data['order'] = obj
         payment_data['type'] = obj.type
-        message_text += 'Ожидайте водителя.'
+        text += 'Ожидайте водителя.'
     elif invoice_payload.startswith('product_'):
         obj: Product = await Product.objects.aget(id=obj_id)
         payment_data['product'] = obj
@@ -64,7 +64,7 @@ async def process_successful_payment(message: types.Message):
 
     payment = await Payment.objects.acreate(**payment_data)
     await message.delete()
-    await message.answer(message_text)
+    await message.answer(text)
 
     if payment.order:
         taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(id=payment.order.driver_id)

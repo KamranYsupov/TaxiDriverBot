@@ -7,7 +7,7 @@ async def edit_text_or_answer(
     **kwargs,
 ):
     try:
-        await message.edit_text(**message_data)
+        await message.edit_text(**kwargs)
     except TelegramBadRequest:
-        await message.answer(**message_data)
+        await message.answer(**kwargs)
     

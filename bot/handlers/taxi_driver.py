@@ -1,13 +1,14 @@
 from typing import Optional
 
 from aiogram import Router, types, F
-
+from asgiref.sync import sync_to_async
 
 from bot.keyboards.inline import (
     get_inline_keyboard,
     get_inline_review_telegram_user_keyboard,
     get_inline_review_driver_keyboard
 )
+from bot.utils.bot import edit_text_or_answer
 from bot.utils.texts import get_order_info_message
 from web.apps.orders.models import Order
 from web.apps.telegram_users.models import (
@@ -31,14 +32,14 @@ async def is_car_approved_handler(
         car: Car = await Car.objects.aget(driver=taxi_driver)
 
     if not car or car.status == Car.DISAPPROVED:
-        message_text = 'Сначала зарегестрируйте авто'
+        text = 'Сначала зарегестрируйте авто'
     elif car.status == Car.WAITING:
-        message_text = 'Ожидайте. Авто на проверке.'
+        text = 'Ожидайте. Авто на проверке.'
     else:
         return True
 
     await callback.message.edit_text(
-        message_text,
+        text,
         reply_markup=get_inline_keyboard(
             buttons={'Назад 🔙': 'menu_driver'}
         )
@@ -53,12 +54,12 @@ async def is_tariff_request_approved_handler(
         return True
 
     if tariff_request.status == Car.WAITING:
-        message_text = 'Ожидайте. Авто на проверке.'
+        text = 'Ожидайте. Авто на проверке.'
     else:
-        message_text = 'Сначала зарегестрируйте авто'
+        text = 'Сначала зарегестрируйте авто'
 
     await callback.message.edit_text(
-        message_text,
+        text,
         reply_markup=get_inline_keyboard(
             buttons={'Назад 🔙': 'menu_driver'}
         )
@@ -188,37 +189,42 @@ async def request_tariff_callback_handler(callback: types.CallbackQuery):
     tariff_requests = await TariffDriverRequest.objects.afilter(**tariff_request_kwargs)
 
     if tariff_requests:
-        message_text = 'Вы уже отправили запрос. Ожидайте ответа администрации.'
+        text = 'Вы уже отправили запрос. Ожидайте ответа администрации.'
     else:
         await TariffDriverRequest.objects.acreate(**tariff_request_kwargs)
-        message_text = '✅ Ваша заявка успешно отправлена! Ожидайте ответа администрации.'
+        text = '✅ Ваша заявка успешно отправлена! Ожидайте ответа администрации.'
 
 
     await callback.message.edit_text(
-        message_text,
+        text,
         reply_markup=get_inline_keyboard(buttons={'Назад 🔙': 'menu_driver'})
     )
 
 
-@router.callback_query(F.data.startswith('take_order_'))
-async def driver_take_order_callback_handler(callback: types.CallbackQuery):
+async def driver_take_order_handler(
+        callback: types.CallbackQuery,
+        from_channel: bool = False
+):
     order_id = callback.data.split('_')[-1]
     order = (await Order.objects.afilter(
         id=order_id,
         select_relations=('telegram_user',)
     ))[0]
 
-    if order.driver:
-        await callback.message.edit_text(
-            'Извини, но кто-то успел принять заказ до тебя',
-            reply_markup=None
-        )
-        return
-
     taxi_driver: TaxiDriver = (await TaxiDriver.objects.afilter(
         telegram_id=callback.from_user.id,
-        select_relations=('car', )
+        select_relations=('car',)
     ))[0]
+
+    if order.driver_id == taxi_driver.id:
+        await callback.answer('Вы уже взяли заказ')
+        return
+
+    if order.driver_id:
+        text = 'Извини, но кто-то успел принять заказ до тебя'
+        await callback.answer(text) if from_channel \
+            else callback.message.edit_text(text, reply_markup=None)
+        return
 
     driver_rating = f'{taxi_driver.rating} ⭐️' if taxi_driver.rating else 'нет оценки'
     order_info_message = (
@@ -238,19 +244,33 @@ async def driver_take_order_callback_handler(callback: types.CallbackQuery):
         )
     )
 
-    await callback.message.edit_text(
-        'Заявка отправлена пользователю ✅\n\n Ожидайте ответа.',
-        reply_markup=None,
+    text = 'Заявка отправлена пользователю ✅\n\n Ожидайте ответа.'
+
+    if not from_channel:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=None,
+        )
+        return
+
+    await callback.bot.send_message(
+        chat_id=taxi_driver.telegram_id,
+        text=text,
     )
+
+
+@router.callback_query(F.data.startswith('take_order_'))
+async def driver_take_order_callback_handler(callback: types.CallbackQuery):
+    await driver_take_order_handler(callback, from_channel=False)
+
+
+@router.callback_query(F.data.startswith('channel_take_order_'))
+async def driver_channel_take_order_callback_handler(callback: types.CallbackQuery):
+    await driver_take_order_handler(callback, from_channel=True)
 
 
 @router.callback_query(F.data.startswith('miss_order_'))
 async def driver_miss_order_callback_handler(callback: types.CallbackQuery):
-    order_id = callback.data.split('_')[-1]
-    order = await Order.objects.aget(id=order_id)
-    order.miss_drivers_count += 1
-    await order.asave()
-
     await callback.message.edit_text(
         'Заказ отклонён.',
         reply_markup=None,

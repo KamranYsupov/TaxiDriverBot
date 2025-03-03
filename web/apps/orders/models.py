@@ -4,7 +4,6 @@ from django.core.validators import MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from web.apps.telegram_users.models import TaxiDriver
 from web.db.model_mixins import (
     AsyncBaseModel,
     TariffMixin,
@@ -45,15 +44,6 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
     travel_length_km = models.FloatField(_('Длина пути в км'), validators=[MaxValueValidator])
     travel_time_minutes = models.PositiveIntegerField(_('Примерное время поездки в минутах'))
 
-    current_active_drivers_count = models.PositiveIntegerField(
-        _('Количесто активных водителей в момент создания заказа'),
-        editable=False
-    )
-    miss_drivers_count = models.PositiveIntegerField(
-        _('Количесто водителей, отклонивших заказ'),
-        default=0
-    )
-
     telegram_user = models.ForeignKey(
         'telegram_users.TelegramUser',
         related_name='orders',
@@ -81,6 +71,10 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
         return f'{self.type}: {self.from_address} - {self.to_address}'
 
     def save(self, *args, **kwargs):
+        if not self._state.adding:
+            super().save(*args, **kwargs)
+            return
+
         travel_length_meters, travel_time_seconds = api_2gis_service.get_route_distance_and_duration(
             from_lat=self.from_latitude,
             from_lon=self.from_longitude,
@@ -90,7 +84,7 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
         self.travel_length_km = travel_length_meters / 1000
         self.travel_time_minutes = round(travel_time_seconds / 60)
         self.price = self.calculate_price()
-        self.current_active_drivers_count = TaxiDriver.objects.filter(is_active=True).count()
+
         super().save(*args, **kwargs)
 
     def calculate_price(self):

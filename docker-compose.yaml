@@ -20,6 +20,16 @@ x-function: &base_python
   networks:
     - internal
 
+x-celery: &base_celery
+  <<: *base_python
+  build:
+    context: .
+    dockerfile: web.dockerfile
+  entrypoint: celery
+  links:
+    - redis
+  restart: always
+
 services:
   db:
     container_name: ${PROJECT_NAME}_db
@@ -70,11 +80,33 @@ services:
     container_name: ${PROJECT_NAME}_bot
     command: python bot/main.py
 
+  redis:
+    image: redis:7.0.11-alpine
+    hostname: redis
+    container_name: ${PROJECT_NAME}_redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    networks:
+      - internal
+    env_file:
+      - .env
+    restart: always
+
+  worker:
+    <<: *base_celery
+    hostname: worker
+    container_name: ${PROJECT_NAME}_worker
+    command: >
+      -A web.core.celery worker -l info -P gevent
+
 volumes:
   static_dir:
   media_dir:
   pg_data:
-  poetry-volume:                 
+  poetry-volume:
+  redis_data:
 
 networks:
   internal:

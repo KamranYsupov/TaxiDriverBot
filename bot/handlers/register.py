@@ -36,7 +36,7 @@ async def menu_callback_query_handler(
     state: FSMContext,
 ):
     user_type = callback.data.split('_')[-1]
-    message_text = 'Выберите действие.'
+    text = 'Выберите действие.'
     if user_type == 'user':
         await TelegramUser.objects.aget_or_create(
             telegram_id=callback.from_user.id,
@@ -44,7 +44,7 @@ async def menu_callback_query_handler(
         )
 
         await callback.message.edit_text(
-            message_text,
+            text,
             reply_markup=inline_user_keyboard,
         )
         return
@@ -65,7 +65,7 @@ async def menu_callback_query_handler(
         return
 
     await callback.message.edit_text(
-        message_text,
+        text,
         reply_markup=inline_driver_keyboard
     )
     return

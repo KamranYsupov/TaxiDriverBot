@@ -24,19 +24,19 @@ async def car_callback_handler(callback: types.CallbackQuery):
     buttons = {}
     if not car or car.status == Car.DISAPPROVED:
         buttons['Регистрация авто'] = 'add_car'
-        message_text = 'Выберите действие'
+        text = 'Выберите действие'
 
     elif car.status == Car.APPROVED:
-        message_text = f'Текущее авто: <b>{car.name}</b>'
+        text = f'Текущее авто: <b>{car.name}</b>'
         buttons['Смена авто'] = 'add_car'
     else:
-        message_text = 'Ожидайте. Авто на проверке.'
+        text = 'Ожидайте. Авто на проверке.'
 
 
     buttons.update({'Назад 🔙': 'menu_driver'})
 
     await callback.message.edit_text(
-        message_text,
+        text,
         reply_markup=get_inline_keyboard(buttons=buttons)
     )
 

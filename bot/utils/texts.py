@@ -10,13 +10,17 @@ address_string = (
     'Новосибирск, улица Ленина, 12/3 корпус 2\n'
 )
 
+months = [
+    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+]
 
 def get_order_info_message(order: Order) -> str:
     order_info_message = (
-        '<b>Тип:</b> '
-        f'<em>{"Такси 🚕" if order.type == OrderType.TAXI else "Доставка 📦"}</em>\n'
+        '<b>Тип: '
+        f'<em>{"Такси 🚕" if order.type == OrderType.TAXI else "Доставка 📦"}</em></b>\n'
         f'<b>Адрес 1:</b> <em>{order.from_address}</em>\n'
-        f'<b>Адрес 2:</b> <em>{order.to_address}</em>\n\n'
+        f'<b>Адрес 2:</b> <em>{order.to_address}</em>\n'
         f'<b>Cтоимость:</b> <em>{order.price} руб.</em>\n'
     )
 
