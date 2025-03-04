@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+from yookassa import Configuration
 
 load_dotenv()
 
@@ -120,15 +121,21 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 # Настройки бота
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+YOOKASSA_PAYMENT_TOKEN = os.getenv('YOOKASSA_PAYMENT_TOKEN')
 BOT_USERNAME = os.getenv('BOT_USERNAME')
 BOT_LINK = f'https://t.me/{BOT_USERNAME}'
 MAX_MESSAGE_PER_SECOND = int(os.getenv('MAX_MESSAGE_PER_SECOND', 1))
+
 PRIVATE_ORDERS_CHANNEL_LINK = os.getenv('PRIVATE_ORDERS_CHANNEL_LINK')
 PRIVATE_ORDERS_CHANNEL_ID = os.getenv('PRIVATE_ORDERS_CHANNEL_ID')
 SEND_ORDER_TO_CHANNEL_MINUTES_INTERVAL = int(os.getenv('SEND_ORDER_TO_CHANNEL_MINUTES_INTERVAL', 1))
 
-YOOKASSA_PAYMENT_TOKEN = os.getenv('YOOKASSA_PAYMENT_TOKEN')
+# Yookassa SDK
+Configuration.account_id = os.getenv('YOOKASSA_SECRET_ACCOUNT_ID')
+Configuration.secret_key = os.getenv('YOOKASSA_SECRET_KEY')
 
 API_2GIS_KEY = os.getenv('API_2GIS_KEY')
 
 TELEGRAM_API_URL = 'https://api.telegram.org'
+
+RESET_TO_ZERO_POINTS_DAYS_INTERVAL = os.getenv('RESET_TO_ZERO_POINTS_DAYS_INTERVAL', 35)

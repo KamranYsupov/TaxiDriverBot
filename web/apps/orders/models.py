@@ -105,10 +105,31 @@ class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
     TYPE_CHOICES = copy(OrderType.CHOICES)
     TYPE_CHOICES.append((PRODUCT, _('Товар')))
 
+    NOT_PAID = 'Not paid'
+    PAID = 'Paid'
+
+    STATUS_CHOICES = (
+        (NOT_PAID, _('Не оплачен')),
+        (PAID, _('Оплачен'))
+    )
+
+    yookassa_payment_id = models.CharField(
+        _('Код платежа yookassa'),
+        db_index=True,
+        editable=False,
+        unique=True,
+        max_length=40,
+    )
     type = models.CharField(
         _('Тип оплаты'),
         choices=TYPE_CHOICES,
         max_length=15,
+    )
+    status = models.CharField(
+        _('Статус'),
+        choices=STATUS_CHOICES,
+        max_length=8,
+        default=NOT_PAID,
     )
 
     order = models.OneToOneField(
