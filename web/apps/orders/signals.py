@@ -5,13 +5,11 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from bot.utils.texts import get_order_info_message
 from web.apps.orders.models import Order
 from web.apps.orders.tasks import (
     send_order_to_active_drivers_task,
     send_order_private_channel_task,
 )
-from web.services.telegram import telegram_service
 
 
 @receiver(post_save, sender=Order)

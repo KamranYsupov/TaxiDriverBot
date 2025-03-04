@@ -11,4 +11,10 @@ app = Celery('app')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
+app.conf.beat_schedule = {
+    'reset_to_zero_points_task':{
+        'task': 'web.apps.telegram_users.tasks.reset_to_zero_points_task',
+        'schedule': crontab(hour='0'),
+    },
+}
 app.conf.timezone = 'Europe/Moscow'

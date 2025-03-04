@@ -21,7 +21,7 @@ def get_order_info_message(order: Order) -> str:
         f'<em>{"Такси 🚕" if order.type == OrderType.TAXI else "Доставка 📦"}</em></b>\n'
         f'<b>Адрес 1:</b> <em>{order.from_address}</em>\n'
         f'<b>Адрес 2:</b> <em>{order.to_address}</em>\n'
-        f'<b>Cтоимость:</b> <em>{order.price} руб.</em>\n'
+        f'<b>Cтоимость:</b> <em>{int(order.price)} руб.</em>\n'
     )
 
     return order_info_message

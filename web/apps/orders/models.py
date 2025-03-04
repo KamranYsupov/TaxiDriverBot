@@ -89,7 +89,7 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
 
     def calculate_price(self):
         price_settings: OrderPriceSettings = OrderPriceSettings.load()
-        price = (
+        price = int(
             price_settings.default_order_price + (
                 price_settings.price_for_km * self.travel_length_km +
                 price_settings.price_for_travel_minute * self.travel_time_minutes

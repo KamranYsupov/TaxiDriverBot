@@ -11,7 +11,6 @@ from bot.keyboards.reply import reply_cancel_keyboard, reply_location_keyboard, 
 from bot.orm.payment import create_order_payment
 from bot.states.order import OrderState
 from bot.states.points import WriteOffPointsState
-from bot.utils.bot import send_order_invoice
 from bot.utils.texts import address_string
 from bot.valiators.taxi_driver import OrderStateValidator
 from web.apps.orders.models import Order, Payment, OrderType, OrderPriceSettings
@@ -150,10 +149,24 @@ async def accept_order_callback_handler(callback: types.CallbackQuery):
     )
 
     if not telegram_user.points:
-        await send_order_invoice(
-            bot=callback.bot,
-            order=order,
-            chat_id=callback.message.chat.id
+        yookassa_payment_response = await create_order_payment(order_id=order_id)
+
+        reply_markup = InlineKeyboardMarkup(
+            inline_keyboard=[[
+                InlineKeyboardButton(
+                    text="Оплатить 💳",
+                    url=yookassa_payment_response.confirmation.confirmation_url
+                )
+            ]]
+        )
+        points = yookassa_payment_response.metadata.get('points')
+        await callback.message.edit_text(
+            'Оплата поездки. После оплаты водитель направиться к вам.\n'
+            f'Начислим {points} баллов.\n\n'
+            '<b>ВАЖНО:</b> после оплаты обязательно нажмите '
+            'на кнопку <b><em>"Вернуться на сайт"</em></b>, '
+            'чтобы завершить заказ.',
+            reply_markup=reply_markup,
         )
         return
 
@@ -183,9 +196,10 @@ async def send_payment_order_callback_handler(callback: types.CallbackQuery):
             )
         ]]
     )
+    points = yookassa_payment_response.metadata.get('points')
     await callback.message.edit_text(
         'Оплата поездки. После оплаты водитель направиться к вам.\n'
-        f'Начислим {yookassa_payment_response.metadata.get('points')} баллов.\n\n'
+        f'Начислим {points} баллов.\n\n'
         '<b>ВАЖНО:</b> после оплаты обязательно нажмите '
         'на кнопку <b><em>"Вернуться на сайт"</em></b>, '
         'чтобы завершить заказ.',

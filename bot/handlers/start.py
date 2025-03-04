@@ -7,7 +7,6 @@ from bot.handlers.payment import successful_payment_handler
 from bot.keyboards.inline import get_inline_keyboard
 from web.apps.orders.models import Payment
 from web.apps.telegram_users.models import TelegramUser
-from web.core.celery import celery_tasks_service
 
 router = Router()
 

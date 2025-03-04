@@ -1,5 +1,8 @@
+from datetime import date
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from web.db.model_mixins import (
     AsyncBaseModel,
@@ -13,13 +16,33 @@ from web.services.telegram import telegram_service
 class TelegramUser(AbstractTelegramUser, TariffMixin):
     """Модель telegram пользователя(заказчика)"""
     points = models.PositiveBigIntegerField(_('Баллы'), default=200)
+    last_add_points_date = models.DateField(
+        _('Дата последнего получения бонусов'),
+        default=date.today
+    )
 
     class Meta:
         verbose_name = _('пользователь')
         verbose_name_plural = _('Telegram пользователи')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__points = self.points
+
     def __str__(self):
         return self.username if self.username else f'Пользователь {self.id}'
+
+    def save(self, *args, **kwargs):
+        self._update_last_add_points_date()
+        super().save(*args, **kwargs)
+
+    async def asave(self, *args, **kwargs):
+        self._update_last_add_points_date()
+        await super().asave(*args, **kwargs)
+
+    def _update_last_add_points_date(self):
+        if self.points > self.__points:
+            self.last_add_points_date = timezone.now().date()
 
 
 class Car(AsyncBaseModel, RequestStatusMixin):

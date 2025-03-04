@@ -101,6 +101,12 @@ services:
     command: >
       -A web.core.celery worker -l info -P gevent
 
+  beat:
+    <<: *base_celery
+    hostname: beat
+    container_name: ${PROJECT_NAME}_beat
+    command: -A web.core.celery beat -l debug
+
 volumes:
   static_dir:
   media_dir:
