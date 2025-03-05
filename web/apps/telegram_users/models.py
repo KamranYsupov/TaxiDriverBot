@@ -53,6 +53,12 @@ class Car(AsyncBaseModel, RequestStatusMixin):
     vin = models.CharField(_('ВИН'), max_length=20)
     photo = models.ImageField(_('Фото'), upload_to='cars/')
 
+    driver = models.ForeignKey(
+        'telegram_users.TaxiDriver',
+        verbose_name=_('Таксист'),
+        related_name='cars',
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
         verbose_name = _('Автомобиль')
@@ -71,6 +77,8 @@ class Car(AsyncBaseModel, RequestStatusMixin):
             return
 
         if self.status == self.APPROVED:
+            self.driver.car_id = self.id
+            self.driver.save()
             text = (
                 'Ваше авто одобрено администрацией!\n\n'
                 f'<a href="{settings.PRIVATE_ORDERS_CHANNEL_LINK}">Канал с заказами</a>'
@@ -98,7 +106,6 @@ class TaxiDriver(AbstractTelegramUser, TariffMixin):
         'telegram_users.Car',
         verbose_name=_('Авто'),
         on_delete=models.SET_NULL,
-        related_name='driver',
         null=True,
     )
 

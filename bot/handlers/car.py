@@ -16,10 +16,11 @@ router = Router()
 
 @router.callback_query(F.data == 'car')
 async def car_callback_handler(callback: types.CallbackQuery):
-    taxi_driver = await TaxiDriver.objects.aget(
+    taxi_driver: TaxiDriver = (await TaxiDriver.objects.afilter(
         telegram_id=callback.from_user.id,
-    )
-    car = await Car.objects.aget(driver=taxi_driver)
+        select_relations=('car',)
+    ))[0]
+    car = taxi_driver.car
 
     buttons = {}
     if not car or car.status == Car.DISAPPROVED:
@@ -113,6 +114,7 @@ async def process_photo(message: types.Message, state: FSMContext):
         'name': data['name'],
         'gos_number': data['gos_number'],
         'vin': data['vin'],
+        'driver_id': taxi_driver.id,
     }
     car = Car(**car_data)
 
@@ -128,8 +130,6 @@ async def process_photo(message: types.Message, state: FSMContext):
         await car.asave()
         os.remove(file.name)
 
-    taxi_driver.car_id = car.id
-    await taxi_driver.asave()
     await state.clear()
     await message.answer_photo(
         photo=car_photo_id,

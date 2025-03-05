@@ -26,10 +26,11 @@ async def is_car_approved_handler(
         car: Optional[Car] = None
 ):
     if not car:
-        taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(
+        taxi_driver: TaxiDriver = (await TaxiDriver.objects.afilter(
             telegram_id=callback.from_user.id,
-        )
-        car: Car = await Car.objects.aget(driver=taxi_driver)
+            select_relations=('car',)
+        ))[0]
+        car = taxi_driver.car
 
     if not car or car.status == Car.DISAPPROVED:
         text = 'Сначала зарегестрируйте авто'
@@ -68,10 +69,11 @@ async def is_tariff_request_approved_handler(
 
 @router.callback_query(F.data == 'is_active')
 async def is_active_callback_handler(callback: types.CallbackQuery):
-    taxi_driver: TaxiDriver = await TaxiDriver.objects.aget(
+    taxi_driver: TaxiDriver = (await TaxiDriver.objects.afilter(
         telegram_id=callback.from_user.id,
-    )
-    car: Car = await Car.objects.aget(driver=taxi_driver)
+        select_relations=('car',)
+    ))[0]
+    car = taxi_driver.car
 
     if not await is_car_approved_handler(callback, car):
         return

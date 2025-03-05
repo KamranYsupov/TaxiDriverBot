@@ -11,7 +11,6 @@ from web.apps.telegram_users.models import TelegramUser
 router = Router()
 
 
-
 @router.message(CommandStart())
 async def start_command_handler(
     message: types.Message,
