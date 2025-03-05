@@ -1,6 +1,7 @@
 import os
 
 from aiogram import Router, types, F
+from aiogram.filters import or_f
 from aiogram.fsm.context import FSMContext
 from django.core.files.images import ImageFile
 
@@ -98,41 +99,57 @@ async def process_vin(message: types.Message, state: FSMContext):
         return
 
     await state.update_data(vin=vin)
-    await state.set_state(CarState.photo)
-    await message.answer('📸 Отправьте фото автомобиля')
+
+    await message.answer('📸 Отправьте фото автомобиля спереди')
+    await state.set_state(CarState.front_photo)
 
 
-@router.message(CarState.photo, F.content_type == types.ContentType.PHOTO)
-async def process_photo(message: types.Message, state: FSMContext):
+@router.message(CarState.front_photo, F.content_type == types.ContentType.PHOTO)
+async def process_front_photo(message: types.Message, state: FSMContext):
+    front_photo_id = message.photo[-1].file_id
+    await state.update_data(front_photo=front_photo_id)
+
+    await message.answer('📸 Отправьте фото автомобиля сбоку')
+    await state.set_state(CarState.profile_photo)
+
+
+@router.message(CarState.profile_photo, F.content_type == types.ContentType.PHOTO)
+async def process_profile_photo(message: types.Message, state: FSMContext):
     taxi_driver = await TaxiDriver.objects.aget(
         telegram_id=message.from_user.id
     )
-    car_photo_id = message.photo[-1].file_id
-    data = await state.get_data()
+    state_data = await state.get_data()
+    profile_photo_id = message.photo[-1].file_id
+    front_photo_id = state_data['front_photo']
 
     car_data = {
-        'name': data['name'],
-        'gos_number': data['gos_number'],
-        'vin': data['vin'],
+        'name': state_data['name'],
+        'gos_number': state_data['gos_number'],
+        'vin': state_data['vin'],
         'driver_id': taxi_driver.id,
     }
     car = Car(**car_data)
 
     save_path = f'{car.name}.jpg'
 
-    await async_telegram_service.save_file(
-        file_id=car_photo_id,
-        save_path=save_path
-    )
+    for photo_id in (front_photo_id, profile_photo_id):
+        await async_telegram_service.save_file(
+            file_id=photo_id,
+            save_path=f'{photo_id}_{save_path}'
+        )
 
-    with open(save_path, 'rb') as file:
-        car.photo = ImageFile(file)
-        await car.asave()
-        os.remove(file.name)
+    with open(f'{front_photo_id}_{save_path}', 'rb') as front_photo:
+        with open(f'{profile_photo_id}_{save_path}', 'rb') as profile_photo:
+            car.front_photo = ImageFile(front_photo)
+            car.profile_photo = ImageFile(profile_photo)
+
+            await car.asave()
+            os.remove(front_photo.name)
+            os.remove(profile_photo.name)
 
     await state.clear()
     await message.answer_photo(
-        photo=car_photo_id,
+        photo=front_photo_id,
         caption=f'Ожидайте. Авто на проверке.\n\n'
                 f'<b>Название</b>: {car.name}\n'
                 f'<b>Гос. номер</b>: {car.gos_number}\n'
@@ -141,7 +158,7 @@ async def process_photo(message: types.Message, state: FSMContext):
     )
 
 
-@router.message(CarState.photo)
+@router.message(or_f(CarState.profile_photo, CarState.front_photo))
 async def invalid_photo(message: types.Message):
     await message.answer('❌ Пожалуйста, отправьте фото автомобиля')
 

@@ -51,7 +51,9 @@ class Car(AsyncBaseModel, RequestStatusMixin):
     name = models.CharField(_('Название'), max_length=150)
     gos_number = models.CharField(_('Государственный номер'), max_length=20)
     vin = models.CharField(_('ВИН'), max_length=20)
-    photo = models.ImageField(_('Фото'), upload_to='cars/')
+
+    front_photo = models.ImageField(_('Фото спереди'), upload_to='cars/fronts/')
+    profile_photo = models.ImageField(_('Фото сбоку'), upload_to='cars/profiles/')
 
     driver = models.ForeignKey(
         'telegram_users.TaxiDriver',

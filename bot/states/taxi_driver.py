@@ -12,4 +12,5 @@ class CarState(StatesGroup):
     name = State()
     gos_number = State()
     vin = State()
-    photo = State()
+    front_photo = State()
+    profile_photo = State()
