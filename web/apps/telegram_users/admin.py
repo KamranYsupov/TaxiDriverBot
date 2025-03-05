@@ -6,65 +6,74 @@ from .models import (
     Car,
     TariffDriverRequest
 )
+from ...admin.mixins import (
+    NotAllowedToChangeMixin,
+    NotAllowedToAddMixin
+)
 
 
 @admin.register(TelegramUser)
-class TelegramUserAdmin(admin.ModelAdmin):
-    fields = (
-        'telegram_id',
-        'username',
-        'rating_display',
-        'tariff',
-    )
-   # exclude = ('reviews', )
-
-    def has_change_permission(self, request, obj=None):
-        return False
+class TelegramUserAdmin(
+    NotAllowedToChangeMixin,
+    NotAllowedToAddMixin,
+    admin.ModelAdmin,
+):
+    readonly_fields = ('rating_display', )
+    exclude = ('reviews', 'last_add_points_date')
 
     @admin.display(description='Оценка')
     def rating_display(self, obj):
-        return f'{obj.rating} ⭐'
+        return f'{obj.rating} ⭐' if obj.rating else 'Нет оценки'
 
 
 @admin.register(TaxiDriver)
 class TaxiDriverAdmin(admin.ModelAdmin):
-    fields = ('rating_display', 'reviews')
+    list_filter = ('is_active', 'tariff')
+
     readonly_fields = ('rating_display', )
+    exclude = ('rating', 'reviews',)
 
     @admin.display(description='Оценка')
     def rating_display(self, obj):
-        return f'{obj.rating} ⭐'
+        return f'{obj.rating} ⭐' if obj.rating else 'Нет оценки'
+
+    def get_exclude(self, request, obj=None):
+        if not obj:
+            return self.exclude + ('car', )
+
+        return self.exclude
 
 
 @admin.register(Car)
-class CarAdmin(admin.ModelAdmin):
+class CarAdmin(NotAllowedToAddMixin, admin.ModelAdmin):
+    list_filter = ('status',)
+
     readonly_fields = (
         'driver',
         'name',
         'gos_number',
         'vin',
-        'photo',
+        'front_photo',
+        'profile_photo',
+    )
+    search_fields = (
+        'name__iregex',
     )
 
     def has_change_permission(self, request, obj: Car | None = None):
-        if not obj:
+        if not obj or obj.status == Car.WAITING:
             return True
 
-        if obj.status != Car.WAITING:
-            return False
-
-        return True
-
+        return False
 
 @admin.register(TariffDriverRequest)
-class TariffDriverRequestAdmin(admin.ModelAdmin):
+class TariffDriverRequestAdmin(NotAllowedToAddMixin, admin.ModelAdmin):
+    list_filter = ('status', 'tariff')
+
     readonly_fields = ('driver', 'tariff')
 
     def has_change_permission(self, request, obj: TariffDriverRequest | None = None):
-        if not obj:
+        if not obj or obj.status == TariffDriverRequest.WAITING:
             return True
 
-        if obj.status != TariffDriverRequest.WAITING:
-            return False
-
-        return True
+        return False

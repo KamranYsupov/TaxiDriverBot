@@ -5,6 +5,7 @@ from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 from django.utils import timezone
 
+from bot.handlers.taxi_driver import is_car_approved_handler
 from bot.keyboards.inline import get_inline_keyboard
 from bot.keyboards.reply import get_reply_calendar_keyboard
 from bot.states.statistic import DateState
@@ -19,6 +20,8 @@ router = Router()
 
 @router.callback_query(F.data.startswith('statistic_'))
 async def statistic_callback_handler(callback: types.CallbackQuery):
+    if not await is_car_approved_handler(callback):
+        return
     page_number = int(callback.data.split('_')[-1])
     per_page = 5
 
@@ -46,7 +49,7 @@ async def statistic_callback_handler(callback: types.CallbackQuery):
         sizes += (2, 1)
 
     buttons.update(pagination_buttons)
-    buttons['Вернуться в меню 📁'] = 'driver_menu'
+    buttons['Назад 🔙'] = 'menu_driver'
 
     await callback.message.edit_text(
         'Выберите год',

@@ -15,20 +15,18 @@ from web.db.models import PriceField
 from web.services.api_2gis import api_2gis_service
 
 
-class OrderType:
+class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
+    """Модель заказа"""
     TAXI = 'Taxi'
     DELIVERY = 'Delivery'
 
-    CHOICES = [
+    TYPE_CHOICES = [
         (TAXI, _('Такси')),
         (DELIVERY, _('Доставка')),
     ]
 
-
-class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
-    """Модель заказа"""
     from_address = models.CharField(_('Откуда'), max_length=150)
-    from_latitude = models.FloatField(_('Широта '))
+    from_latitude = models.FloatField(_('Широта'))
     from_longitude = models.FloatField(_('Долгота'))
 
     to_address = models.CharField(_('Куда'), max_length=150)
@@ -37,8 +35,8 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
 
     type = models.CharField(
         _('Тип поездки'),
-        choices=OrderType.CHOICES,
-        default=OrderType.TAXI,
+        choices=TYPE_CHOICES,
+        default=TAXI,
         max_length=15,
     )
     travel_length_km = models.FloatField(_('Длина пути в км'), validators=[MaxValueValidator])
@@ -68,7 +66,7 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
         verbose_name_plural = _('Заказы')
 
     def __str__(self):
-        return f'{self.type}: {self.from_address} - {self.to_address}'
+        return f'{self.from_address} - {self.to_address}'
 
     def save(self, *args, **kwargs):
         if not self._state.adding:
@@ -100,10 +98,15 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
 
 class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
     """Модель оплаты"""
+    TAXI = 'Taxi'
+    DELIVERY = 'Delivery'
     PRODUCT = 'Product'
 
-    TYPE_CHOICES = copy(OrderType.CHOICES)
-    TYPE_CHOICES.append((PRODUCT, _('Товар')))
+    TYPE_CHOICES = [
+        (TAXI, _('Такси')),
+        (DELIVERY, _('Доставка')),
+        (PRODUCT, _('Продукт'))
+    ]
 
     NOT_PAID = 'Not paid'
     PAID = 'Paid'
@@ -166,7 +169,7 @@ class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
         verbose_name_plural = _('Оплаты')
 
     def __str__(self):
-        return f'{self.type}: {self.price}р.'
+        return f'{self.telegram_user}: {self.price}р.'
 
 
 class OrderPriceSettings(AsyncBaseModel, SingletonModel):

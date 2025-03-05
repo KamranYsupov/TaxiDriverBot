@@ -3,7 +3,17 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 
 
-class SingletonModelAdmin(admin.ModelAdmin):
+class NotAllowedToChangeMixin:
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+class NotAllowedToAddMixin:
+    def has_add_permission(self, request):
+        return False
+
+
+class SingletonModelAdmin(admin.ModelAdmin, NotAllowedToAddMixin):
     def has_add_permission(self, request):
         return False
 
@@ -18,3 +28,5 @@ class SingletonModelAdmin(admin.ModelAdmin):
                 args=(obj.pk,)
             )
         )
+
+

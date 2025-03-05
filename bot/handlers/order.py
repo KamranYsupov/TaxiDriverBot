@@ -13,7 +13,7 @@ from bot.states.order import OrderState
 from bot.states.points import WriteOffPointsState
 from bot.utils.texts import address_string
 from bot.valiators.taxi_driver import OrderStateValidator
-from web.apps.orders.models import Order, Payment, OrderType, OrderPriceSettings
+from web.apps.orders.models import Order, Payment, OrderPriceSettings
 from web.apps.products.models import Product
 from web.apps.telegram_users.models import TelegramUser, TaxiDriver
 from web.services.api_2gis import api_2gis_service, API2GisError
@@ -27,8 +27,8 @@ async def choice_order_type_callback_handler(
         callback: types.CallbackQuery
 ):
     buttons = {
-        'Такси 🚕': 'order_такси',
-        'Доставка 📦': 'order_доставка',
+        'Такси 🚕': 'order_taxi',
+        'Доставка 📦': 'order_delivery',
         'Назад 🔙': 'menu_user'
     }
 
@@ -58,7 +58,7 @@ async def process_order_type_callback_handler(
     await state.set_state(OrderState.from_address)
 
 
-@router.message(OrderState.from_address, F.text)
+@router.message(OrderState.from_address, F.location)
 async def process_from_address(
         message: types.Message,
         state: FSMContext
