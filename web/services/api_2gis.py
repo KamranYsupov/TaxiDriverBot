@@ -136,17 +136,22 @@ class API2GisService:
         response = requests.get(url, params=params)
         response_data = response.json()
 
+        not_found_exc = API2GisError('Адрес не найден')
+
         if 'result' not in response_data or not response_data['result']['items']:
-            raise API2GisError('Адрес не найден для данных координат')
+            raise not_found_exc
 
         if return_data:
             return response_data
 
-        address_data = response_data['result']['items'][0]
-        city: str = address_data['full_name'].split(',')[0]
-        street_and_house = address_data['address_name']
+        try:
+            address_data = response_data['result']['items'][0]
+            city: str = address_data['full_name'].split(',')[0]
+            street_and_house = address_data['address_name']
+        except KeyError:
+            raise not_found_exc
 
-        address_string = f'{city}, {street_and_house}' # Город, Улица, Дом
+        address_string = f'{city}, {street_and_house}'  # Город, Улица, Дом
         return address_string
 
 

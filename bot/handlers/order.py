@@ -63,9 +63,8 @@ async def process_from_address(
         message: types.Message,
         state: FSMContext
 ):
-    # lat = message.location.latitude
-    # lon = message.location.longitude
-    lat, lon = 55.035049, 82.92005
+    location = message.location
+    lat, lon = location.latitude, location.longitude
     from_address = api_2gis_service.get_address(lat, lon)
     from_address_data = {
         'address': from_address,
@@ -75,7 +74,7 @@ async def process_from_address(
     await state.update_data(from_address=from_address_data)
 
     await message.answer(
-        'Отправьте адрес назначения в формате <b>Город, Улица, Дом</b>\n\n'
+        'Отправьте адрес назначения.\n\n'
         '<b><em>Примеры корректныx адресов:\n\n'
         f'<blockquote>{address_string}</blockquote></em></b>',
         reply_markup=reply_cancel_keyboard,
@@ -89,41 +88,79 @@ async def process_to_address(message: types.Message, state: FSMContext):
         '<em>Анализирую маршрут . . .</em>',
         reply_markup=reply_keyboard_remove,
     )
-
-    telegram_user = await TelegramUser.objects.aget(
-        telegram_id=message.from_user.id
-    )
     state_data = await state.get_data()
 
-    from_address_data = state_data['from_address']
-    from_lat, from_lon = from_address_data['lat'], from_address_data['lon']
-
-    to_address = message.text
-
+    from_address = state_data['from_address']['address']
+    city = from_address.split(',')[0]
     try:
-        to_lat, to_lon = api_2gis_service.get_cords(to_address)
-
-        order_data = {
-            'type': state_data['type'],
-            'telegram_user_id': telegram_user.id,
-
-            'from_address': from_address_data['address'],
-            'from_latitude': from_lat,
-            'from_longitude': from_lon,
-
-            'to_address': to_address,
-            'to_latitude': to_lat,
-            'to_longitude': to_lon,
-
+        to_address_input = f'{city}, {message.text}'
+        to_lat, to_lon = api_2gis_service.get_cords(to_address_input)
+        to_address = api_2gis_service.get_address(to_lat, to_lon)
+        to_address_data = {
+            'address': to_address,
+            'lat': to_lat,
+            'lon': to_lon
         }
+        await state.update_data(to_address=to_address_data)
 
-        await Order.objects.acreate(**order_data)
-        
     except API2GisError as e:
         await message.answer(str(e))
         return
 
-    await message.answer('<em>Поиск водителей . . .</em>')
+    await message.answer(
+        '<b>Данные поездки:</b>\n\n'
+        f'<b>Адрес 1:</b> <em>{from_address}</em>\n'
+        f'<b>Адрес 2:</b> <em>{to_address}</em>\n',
+        reply_markup=get_inline_keyboard(
+            buttons={
+                'Все верно ✅': 'create_order',
+                'Указать другой адрес ✍️': 'edit_to_address'
+            },
+            sizes=(1, 1)
+        )
+    )
+
+
+@router.callback_query(F.data == 'edit_to_address')
+async def edit_to_address_callback_handler(
+        callback: types.CallbackQuery,
+        state: FSMContext,
+):
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(
+        'Отправьте новый адрес назначения.'
+    )
+    await state.set_state(OrderState.to_address)
+
+
+@router.callback_query(F.data == 'create_order')
+async def create_order_callback_handler(
+        callback: types.CallbackQuery,
+        state: FSMContext,
+):
+    state_data = await state.get_data()
+    telegram_user = await TelegramUser.objects.aget(
+        telegram_id=callback.from_user.id
+    )
+
+    from_address_data = state_data['from_address']
+    to_address_data = state_data['to_address']
+    order_data = {
+        'type': state_data['type'],
+        'telegram_user_id': telegram_user.id,
+
+        'from_address': from_address_data['address'],
+        'from_latitude': from_address_data['lat'],
+        'from_longitude': from_address_data['lon'],
+
+        'to_address': to_address_data['address'],
+        'to_latitude': to_address_data['lat'],
+        'to_longitude': to_address_data['lon'],
+    }
+
+    await Order.objects.acreate(**order_data)
+    await callback.message.delete()
+    await callback.message.answer('<em>Поиск водителей . . .</em>')
     await state.clear()
 
 
