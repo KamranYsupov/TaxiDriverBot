@@ -7,6 +7,7 @@ from .taxi_driver import router as taxi_driver_router
 from .order import router as order_router
 from .reviews import router as reviews_router
 from .statistic import router as statistic_router
+from .telegram_user import router as telegram_user_router
 
 def get_main_router():
     main_router = Router()
@@ -18,5 +19,6 @@ def get_main_router():
     main_router.include_router(order_router)
     main_router.include_router(reviews_router)
     main_router.include_router(statistic_router)
+    main_router.include_router(telegram_user_router)
 
     return main_router

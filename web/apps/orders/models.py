@@ -4,6 +4,7 @@ from django.core.validators import MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from web.apps.telegram_users.models import TelegramUser
 from web.db.model_mixins import (
     AsyncBaseModel,
     TariffMixin,
@@ -87,8 +88,13 @@ class Order(AsyncBaseModel, TariffMixin, PriceMixin, TimestampMixin):
 
     def calculate_price(self):
         price_settings: OrderPriceSettings = OrderPriceSettings.load()
+        default_order_price = price_settings.default_order_price
+
+        if self.telegram_user.tariff == TelegramUser.URGENT:
+            default_order_price += default_order_price * 0.27 # + 27%
+
         price = int(
-            price_settings.default_order_price + (
+            default_order_price + (
                 price_settings.price_for_km * self.travel_length_km +
                 price_settings.price_for_travel_minute * self.travel_time_minutes
             )

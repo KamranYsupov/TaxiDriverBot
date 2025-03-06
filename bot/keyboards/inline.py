@@ -64,8 +64,9 @@ inline_user_keyboard = get_inline_keyboard(
     buttons={
         'Заказать 🚖': 'order',
         'Маркет 📦': 'market',
-        'Тариф 💵': 'change_tariff',
-    }
+        'Тариф 💵': 'tariff',
+    },
+    sizes=(1, 1, 1)
 )
 
 inline_cancel_keyboard = get_inline_keyboard(
