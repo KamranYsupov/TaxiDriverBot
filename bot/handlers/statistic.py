@@ -136,15 +136,20 @@ async def day_statistic_handler(
         )
         return
 
+    text = f'<b>Заказы на {statistic_date_string}</b>\n\n'
+
+    total_profit = 0
+    for order in orders[:10]:
+        text += f'{get_order_info_message(order)}\n\n'
+        total_profit += order.price
+
     buttons = {}
     if len(orders) > 10:
         buttons['Отправить всю статистику 📥'] = \
             f'send_statistic_{statistic_date_string}'
+    else:
+        text += f'Общая прибыль: <em><b>{int(total_profit)}</b> рублей</em>'
 
-    text = f'<b>Заказы на {statistic_date_string}</b>\n\n'
-
-    for order in orders[:10]:
-        text += f'{get_order_info_message(order)}\n\n'
 
     buttons['Назад 🔙'] = f'month_statistic_{month}_{year}'
 
