@@ -150,9 +150,9 @@ class Payment(AsyncBaseModel, PriceMixin, TimestampMixin):
         null=True,
         default=None,
     )
-    product = models.OneToOneField(
+    product = models.ForeignKey(
         'products.Product',
-        related_name='payment',
+        related_name='payments',
         on_delete=models.CASCADE,
         verbose_name=_('Товар'),
         blank=True,

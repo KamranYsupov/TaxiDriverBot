@@ -5,10 +5,11 @@ from aiogram import Router, types, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async
+from django.conf import settings
 
-from bot.keyboards.inline import get_inline_keyboard
+from bot.keyboards.inline import get_inline_keyboard, get_link_button_inline_keyboard
 from bot.keyboards.reply import reply_cancel_keyboard, reply_location_keyboard, reply_keyboard_remove
-from bot.orm.payment import create_order_payment
+from bot.orm.payment import create_order_payment, create_payment
 from bot.states.order import OrderState
 from bot.states.points import WriteOffPointsState
 from bot.utils.texts import address_string
@@ -58,7 +59,16 @@ async def process_order_type_callback_handler(
     await state.set_state(OrderState.from_address)
 
 
-@router.message(OrderState.from_address, F.location)
+async def validate_address_city(message: types.Message, from_address: str):
+    from_address_city = from_address.split(',')[0]
+    if not from_address_city in settings.ORDER_CITIES:
+        await message.answer('К сожалению, мы не работаем в вашем регионе.')
+        return
+
+    return True
+
+
+@router.message(OrderState.from_address, F.text)
 async def process_from_address(
         message: types.Message,
         state: FSMContext
@@ -66,6 +76,10 @@ async def process_from_address(
     location = message.location
     lat, lon = location.latitude, location.longitude
     from_address = api_2gis_service.get_address(lat, lon)
+    if not await validate_address_city(message, from_address):
+        await state.clear()
+        return
+
     from_address_data = {
         'address': from_address,
         'lat': lat,
@@ -186,15 +200,14 @@ async def accept_order_callback_handler(callback: types.CallbackQuery):
     )
 
     if not telegram_user.points:
-        yookassa_payment_response = await create_order_payment(order_id=order_id)
+        yookassa_payment_response = await create_order_payment(
+            order_id=order_id,
+            telegram_user_id=telegram_user.id
+        )
 
-        reply_markup = InlineKeyboardMarkup(
-            inline_keyboard=[[
-                InlineKeyboardButton(
-                    text="Оплатить 💳",
-                    url=yookassa_payment_response.confirmation.confirmation_url
-                )
-            ]]
+        reply_markup = get_link_button_inline_keyboard(
+            button_text='Оплатить 💳',
+            url=yookassa_payment_response.confirmation.confirmation_url
         )
         points = yookassa_payment_response.metadata.get('points')
         await callback.message.edit_text(
@@ -202,7 +215,7 @@ async def accept_order_callback_handler(callback: types.CallbackQuery):
             f'Начислим {points} баллов.\n\n'
             '<b>ВАЖНО:</b> после оплаты обязательно нажмите '
             'на кнопку <b><em>"Вернуться на сайт"</em></b>, '
-            'чтобы завершить заказ.',
+            'чтобы завершить оплату.',
             reply_markup=reply_markup,
         )
         return
@@ -223,15 +236,17 @@ async def accept_order_callback_handler(callback: types.CallbackQuery):
 @router.callback_query(F.data.startswith('send_payment_order_'))
 async def send_payment_order_callback_handler(callback: types.CallbackQuery):
     order_id = callback.data.split('_')[-1]
-    yookassa_payment_response = await create_order_payment(order_id=order_id)
+    telegram_user = await TelegramUser.objects.aget(
+        telegram_id=callback.from_user.id
+    )
+    yookassa_payment_response = await create_order_payment(
+        order_id=order_id,
+        telegram_user_id=telegram_user.id,
+    )
 
-    reply_markup = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(
-                text="Оплатить 💳",
-                url=yookassa_payment_response.confirmation.confirmation_url
-            )
-        ]]
+    reply_markup = get_link_button_inline_keyboard(
+        button_text='Оплатить 💳',
+        url=yookassa_payment_response.confirmation.confirmation_url
     )
     points = yookassa_payment_response.metadata.get('points')
     await callback.message.edit_text(
@@ -252,9 +267,10 @@ async def write_off_points_callback_handler(
     obj_type, obj_id = callback.data.split('_')[-2:]
     model = Order if obj_type == 'order' else Product
 
-    obj: Union[Order, Product] = await model.objects.aget(id=obj_id)
-
-    await state.update_data(obj=obj)
+    await state.update_data(
+        obj_id=obj_id,
+        obj_model=model,
+    )
     await state.set_state(WriteOffPointsState.points_count)
 
     await callback.message.edit_text(
@@ -275,15 +291,22 @@ async def process_points_count_handler(
         return
 
     state_data = await state.get_data()
-    obj: Union[Order, Product] = state_data.get('obj')
+
+    model = state_data['obj_model']
+    obj_id = state_data['obj_id']
+    obj: Union[Order, Product] = await model.objects.aget(id=obj_id)
 
     payment_kwargs = {}
     if isinstance(obj, Order):
         obj_string = 'заказ'
         payment_kwargs['order_id'] = obj.id
+        payment_text = \
+            'Оплата поездки. После оплаты водитель направиться к вам.\n\n'
     else:
         obj_string = 'товар'
         payment_kwargs['product_id'] = obj.id
+        payment_text = \
+            'Оплата товара. После оплаты к вам направиться доставка.\n\n'
 
     if points_count > obj.price / 2:
         await message.answer(
@@ -295,6 +318,7 @@ async def process_points_count_handler(
     telegram_user: TelegramUser = await TelegramUser.objects.aget(
         telegram_id=message.from_user.id
     )
+    payment_kwargs['telegram_user_id'] = telegram_user.id
 
     try:
         telegram_user.points -= points_count
@@ -305,12 +329,12 @@ async def process_points_count_handler(
         await telegram_user.asave()
 
     await message.answer('Баллы успешно списаны ✅')
-    yookassa_payment_response = await create_order_payment(**payment_kwargs)
+    yookassa_payment_response = await create_payment(**payment_kwargs)
     await message.answer(
-        'Оплата поездки. После оплаты водитель направиться к вам.\n\n'
+        payment_text +
         '<b>ВАЖНО:</b> после оплаты обязательно нажмите '
         'на кнопку <b><em>"Вернуться на сайт"</em></b>, '
-        'чтобы завершить заказ.',
+        'чтобы завершить оплату.',
         reply_markup=InlineKeyboardMarkup(
         inline_keyboard=[[
             InlineKeyboardButton(

@@ -1,6 +1,7 @@
 from typing import Optional
 
 from aiogram import Router, types, Bot, F
+from django.conf import settings
 from yookassa.domain.response import PaymentResponse
 
 from bot.keyboards.inline import get_inline_keyboard
@@ -15,7 +16,7 @@ async def successful_payment_handler(
         payment: Payment,
         yookassa_payment: PaymentResponse,
 ):
-    text = f'Платеж на сумму {payment.price} руб. прошел успешно ✅\n'
+    text = f'Платеж на сумму {int(payment.price)} руб. прошел успешно ✅\n'
 
 
     if yookassa_payment.metadata.get('type') == 'order':
@@ -33,6 +34,20 @@ async def successful_payment_handler(
             reply_markup=get_inline_keyboard(
                 buttons={'Завершить заказ': f'end_order_{order.id}'}
             )
+        )
+    elif yookassa_payment.metadata.get('type') == 'product':
+        text += 'Ожидайте доставку.'
+
+        product = await Product.objects.aget(id=payment.product_id)
+        address = yookassa_payment.metadata['address']
+        phone_number = yookassa_payment.metadata['phone_number']
+
+        await message.bot.send_message(
+            chat_id=settings.PRIVATE_PRODUCTS_ORDERS_CHANNEL_ID,
+            text=f'Доставка товара <b>{product.name}</b>\n\n'
+                 f'Адрес: <b>{address}</b>\n'
+                 f'Телефон получателя: <b><em>{phone_number}</em></b>',
+            parse_mode='HTML',
         )
 
     await message.delete()

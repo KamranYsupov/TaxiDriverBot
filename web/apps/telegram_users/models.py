@@ -83,7 +83,7 @@ class Car(AsyncBaseModel, RequestStatusMixin):
             self.driver.save()
             text = (
                 'Ваше авто одобрено администрацией!\n\n'
-                f'<a href="{settings.PRIVATE_ORDERS_CHANNEL_LINK}">Канал с заказами</a>'
+                f'<a href="{settings.PRIVATE_TAXI_ORDERS_CHANNEL_LINK}">Канал с заказами</a>'
             )
         else:
             text = 'К сожалению, ваше авто не прошло верификацию.'

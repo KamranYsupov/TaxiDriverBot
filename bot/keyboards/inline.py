@@ -50,6 +50,16 @@ def get_inline_review_telegram_user_keyboard(
     )
 
 
+def get_link_button_inline_keyboard(
+        button_text: str,
+        url: str
+) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=button_text, url=url)]]
+    )
+
+
+
 inline_driver_keyboard = get_inline_keyboard(
     buttons={
         'Смена 🧭': 'is_active',
@@ -63,7 +73,7 @@ inline_driver_keyboard = get_inline_keyboard(
 inline_user_keyboard = get_inline_keyboard(
     buttons={
         'Заказать 🚖': 'order',
-        'Маркет 📦': 'market',
+        'Маркет 📦': 'market_1',
         'Тариф 💵': 'tariff',
     },
     sizes=(1, 1, 1)

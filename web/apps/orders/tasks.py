@@ -26,7 +26,7 @@ def send_order_to_active_drivers_task(order_id: Order.id):
     if not active_drivers.exists():
         take_order_button['callback_data'] = f'channel_take_order_{order.id}'
         telegram_service.send_message(
-            chat_id=settings.PRIVATE_ORDERS_CHANNEL_ID,
+            chat_id=settings.PRIVATE_TAXI_ORDERS_CHANNEL_ID,
             text=order_message,
             reply_markup={'inline_keyboard': [[take_order_button]]}
         )
@@ -61,7 +61,7 @@ def send_order_private_channel_task(order_id: Order.id):
     ]]
 
     telegram_service.send_message(
-        chat_id=settings.PRIVATE_ORDERS_CHANNEL_ID,
+        chat_id=settings.PRIVATE_TAXI_ORDERS_CHANNEL_ID,
         text=order_message,
         reply_markup={'inline_keyboard': inline_keyboard}
     )

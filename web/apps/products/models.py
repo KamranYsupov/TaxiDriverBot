@@ -11,13 +11,13 @@ class Product(AsyncBaseModel, PriceMixin, TimestampMixin):
     """Модель товара"""
 
     name = models.CharField(_('Название'), max_length=150)
-    description = models.TextField(_('Описание'))
+    description = models.TextField(_('Описание'), max_length=4000)
 
     class Meta:
         verbose_name = _('Товар')
         verbose_name_plural = _('Товары')
 
     def __str__(self):
-        return _(self.name)
+        return self.name
 
 

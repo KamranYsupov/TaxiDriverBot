@@ -2,6 +2,7 @@
 from aiogram import Router, types
 from aiogram.filters import CommandStart, CommandObject
 from yookassa import Payment as YooKassaPayment
+from django.conf import settings
 
 from bot.handlers.payment import successful_payment_handler
 from bot.keyboards.inline import get_inline_keyboard
@@ -53,7 +54,6 @@ async def start_command_handler(
     await telegram_user.asave()
 
     await successful_payment_handler(message, payment, yookassa_payment)
-
 
 
 
