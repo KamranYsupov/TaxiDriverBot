@@ -68,7 +68,7 @@ async def validate_address_city(message: types.Message, from_address: str):
     return True
 
 
-@router.message(OrderState.from_address, F.text)
+@router.message(OrderState.from_address, F.location)
 async def process_from_address(
         message: types.Message,
         state: FSMContext

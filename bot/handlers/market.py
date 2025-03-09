@@ -113,7 +113,7 @@ async def buy_product_callback_handler(
     await state.set_state(ProductState.address)
 
 
-@router.message(ProductState.address, F.text)
+@router.message(ProductState.address, F.location)
 async def process_address_message_handler(
     message: types.Message,
     state: FSMContext
