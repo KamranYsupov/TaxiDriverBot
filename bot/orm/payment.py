@@ -4,7 +4,7 @@ from asgiref.sync import sync_to_async
 from django.db import transaction
 from yookassa.domain.response import PaymentResponse
 
-from web.apps.orders.models import Order, OrderPriceSettings, Payment
+from web.apps.orders.models import Order, OrderPriceSettings, Payment, PointsSettings
 from web.apps.products.models import Product
 from web.apps.telegram_users.models import TelegramUser
 from web.services.yookassa import create_yookassa_payment
@@ -20,20 +20,6 @@ async def create_order_payment(
         price=price,
         telegram_user_id=telegram_user_id,
         order_id=order_id,
-        metadata=metadata,
-    )
-
-
-async def create_product_payment(
-        product_id: Product.id,
-        telegram_user_id: TelegramUser.id,
-        price: Optional[Product.id] = None,
-        metadata: Optional[dict] = None,
-) -> PaymentResponse:
-    return await create_payment(
-        price=price,
-        telegram_user_id=telegram_user_id,
-        product_id=product_id,
         metadata=metadata,
     )
 
@@ -67,11 +53,14 @@ def create_payment(
         payment.product = obj
         payment.type = Payment.PRODUCT
         payment_description += 'товара'
-        points = 0
+
+        points = int(
+            obj.price * PointsSettings.load().points_percent_for_product / 100
+        )
         metadata['type'] = 'product'
 
     else:
-        return
+        return None
 
     payment.price = price if price else obj.price
     metadata['points'] = points

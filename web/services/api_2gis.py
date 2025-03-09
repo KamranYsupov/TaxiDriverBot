@@ -106,7 +106,7 @@ class API2GisService:
         response_data = response.json()
 
         if 'result' not in response_data:
-            raise API2GisError('Ошибка при расчете маршрута')
+            raise API2GisError('Не удалось рассчитать маршрут.')
 
         if return_data:
             return response_data

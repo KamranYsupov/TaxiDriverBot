@@ -200,3 +200,19 @@ class OrderPriceSettings(AsyncBaseModel, SingletonModel):
 
     def __str__(self):
         return ''
+
+
+class PointsSettings(AsyncBaseModel, SingletonModel):
+    """Singelton модель настроек начисления бонусов"""
+
+    points_percent_for_product = models.PositiveIntegerField(
+        _('Процент начисления бонусов от цены товара'),
+        default=0
+    )
+
+    class Meta:
+        verbose_name = _('Настройки начисления бонусов')
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return ''

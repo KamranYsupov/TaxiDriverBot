@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     Order,
     Payment,
-    OrderPriceSettings
+    OrderPriceSettings, PointsSettings
 )
 from web.admin.mixins import (
     SingletonModelAdmin,
@@ -82,3 +82,7 @@ class PaymentAdmin(
 class OrderPriceSettingsAdmin(SingletonModelAdmin):
     pass
 
+
+@admin.register(PointsSettings)
+class PointsSettingsSettingsAdmin(SingletonModelAdmin):
+    pass

@@ -2,7 +2,7 @@ import os
 from typing import List
 
 from aiogram import Router, types, F
-from aiogram.filters import StateFilter
+from aiogram.filters import StateFilter, or_f
 from aiogram.fsm.context import FSMContext
 
 from bot.handlers.order import validate_address_city
@@ -13,16 +13,16 @@ from bot.keyboards.inline import (
     get_link_button_inline_keyboard
 )
 from bot.keyboards.reply import reply_location_keyboard, reply_contact_keyboard, reply_keyboard_remove
-from bot.orm.payment import create_product_payment
+from bot.orm.payment import create_payment
 from bot.states.product import ProductState
 from bot.utils.pagination import Paginator, get_pagination_buttons
 from web.apps.products.models import Product
 
 from web.apps.telegram_users.models import TelegramUser
-from web.services.api_2gis import api_2gis_service
-
+from web.services.api_2gis import api_2gis_service, API2GisError
 
 router = Router()
+
 
 @router.callback_query(F.data.startswith('market_'))
 async def marker_callback_handler(
@@ -107,33 +107,70 @@ async def buy_product_callback_handler(
     )
     await callback.message.answer(
         'Нажмите на кнопку <b>"Отправить геолокацию 🏬"</b>'
-        'чтобы отправить ваш адресс.',
+        'чтобы отправить ваш адресс.\n\n'
+        'Или напишите его вручную в формате <em><b>Город, улица дом</b></em>.',
         reply_markup=reply_location_keyboard
     )
     await state.set_state(ProductState.address)
 
 
-@router.message(ProductState.address, F.location)
+@router.message(
+    ProductState.address,
+    or_f(F.location, F.text),
+)
 async def process_address_message_handler(
     message: types.Message,
     state: FSMContext
 ):
     location = message.location
-    lat, lon = location.latitude, location.longitude
-    address = api_2gis_service.get_address(lat, lon)
+
+    try:
+        if location:
+            lat, lon = location.latitude, location.longitude
+        else:
+            lat, lon = api_2gis_service.get_cords(message.text)
+
+        address = api_2gis_service.get_address(lat, lon)
+
+    except API2GisError as e:
+        error_msg = str(e) if not location else (
+            'Не получилось распознать ваш адрес по геопозиции(\n\n'
+            '<em>Пожалуйста, напишите адрес вручную.</em>'
+        )
+        await message.answer(error_msg)
+        return
+
     if not await validate_address_city(message, address):
+        await message.answer(
+            'К сожалению, мы не работаем в вашем регионе.',
+            reply_markup=reply_keyboard_remove
+        )
         await state.clear()
         return
 
-    state_data = await state.update_data(address=address)
-    product_id = state_data['product_id']
-
+    await state.update_data(address=address)
     await message.answer(
         f'Ваш адресс - <b>{address}</b>?',
         reply_markup=get_inline_keyboard(
-            buttons={'Все верно ✅': f'confirm_address'}
+            buttons={
+                'Все верно ✅': f'confirm_address',
+                'Указать другой адрес ✍️': 'edit_address'
+            },
+            sizes=(1, 1)
         )
     )
+
+
+@router.callback_query(F.data == 'edit_address')
+async def edit_address_callback_handler(
+        callback: types.CallbackQuery,
+        state: FSMContext
+):
+    await callback.message.edit_reply_markup(
+        reply_markup=None
+    )
+    await callback.message.answer('Отправьте новый адрес.')
+    await state.set_state(ProductState.address)
 
 
 @router.callback_query(F.data == 'confirm_address')
@@ -173,7 +210,7 @@ async def process_phone_number_message_handler(
     if not telegram_user.points:
         state_data = await state.get_data()
 
-        yookassa_payment_response = await create_product_payment(
+        yookassa_payment_response = await create_payment(
             product_id=product_id,
             telegram_user_id=telegram_user.id,
             metadata={
@@ -220,7 +257,7 @@ async def send_payment_product_callback_handler(
     )
     state_data = await state.get_data()
 
-    yookassa_payment_response = await create_product_payment(
+    yookassa_payment_response = await create_payment(
         product_id=product_id,
         telegram_user_id=telegram_user.id,
         metadata={

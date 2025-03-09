@@ -2,6 +2,7 @@ import uuid
 from typing import Union
 
 from aiogram import Router, types, F, Bot
+from aiogram.filters import or_f
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async
@@ -9,7 +10,7 @@ from django.conf import settings
 
 from bot.keyboards.inline import get_inline_keyboard, get_link_button_inline_keyboard
 from bot.keyboards.reply import reply_cancel_keyboard, reply_location_keyboard, reply_keyboard_remove
-from bot.orm.payment import create_order_payment, create_payment
+from bot.orm.payment import create_payment
 from bot.states.order import OrderState
 from bot.states.points import WriteOffPointsState
 from bot.utils.texts import address_string
@@ -53,7 +54,8 @@ async def process_order_type_callback_handler(
     await callback.message.delete()
     await callback.message.answer(
         'Нажмите на кнопку <b>"Отправить геолокацию 🏬"</b>'
-        'чтобы отправить ваш адресс.',
+        'чтобы отправить ваш адресс.\n\n'
+        'Или напишите его вручную в формате <em><b>Город, улица дом</b></em>.',
         reply_markup=reply_location_keyboard
     )
     await state.set_state(OrderState.from_address)
@@ -61,22 +63,69 @@ async def process_order_type_callback_handler(
 
 async def validate_address_city(message: types.Message, from_address: str):
     from_address_city = from_address.split(',')[0]
-    if not from_address_city in settings.ORDER_CITIES:
-        await message.answer('К сожалению, мы не работаем в вашем регионе.')
-        return
-
-    return True
+    print(from_address_city in settings.ORDER_CITIES)
+    return from_address_city in settings.ORDER_CITIES
 
 
-@router.message(OrderState.from_address, F.location)
+async def send_order_message(
+        message: types.Message,
+        from_address: str,
+        to_address: str,
+):
+    await message.answer(
+        '<b>Данные поездки:</b>\n\n'
+        f'<b>Адрес отправки:</b> <em>{from_address}</em>\n'
+        f'<b>Адрес назначения:</b> <em>{to_address}</em>\n',
+        reply_markup=get_inline_keyboard(
+            buttons={
+                'Указать другой адрес отправки ✍️': 'edit_from_address',
+                'Указать другой адрес назначения ✍️': 'edit_to_address',
+                'Все верно ✅': 'create_order',
+            },
+            sizes=(1, 1, 1)
+        )
+    )
+
+
+@router.message(
+    OrderState.from_address,
+    or_f(F.location, F.text)
+)
 async def process_from_address(
         message: types.Message,
         state: FSMContext
 ):
+    state_data = await state.get_data()
+    from_address_input = message.text
+    to_address_data = state_data.get('to_address')
+
+    if to_address_data:
+        city = to_address_data['address'].split(',')[0]
+        from_address_input = f'{city}, {message.text}'
+
     location = message.location
-    lat, lon = location.latitude, location.longitude
-    from_address = api_2gis_service.get_address(lat, lon)
+
+    try:
+        if location:
+            lat, lon = location.latitude, location.longitude
+        else:
+            lat, lon = api_2gis_service.get_cords(from_address_input)
+
+        from_address = api_2gis_service.get_address(lat, lon)
+
+    except API2GisError as e:
+        error_msg = str(e) if not location else (
+            'Не получилось распознать ваш адрес по геопозиции(\n\n'
+            '<em>Пожалуйста, напишите адрес вручную.</em>'
+        )
+        await message.answer(error_msg)
+        return
+
     if not await validate_address_city(message, from_address):
+        await message.answer(
+            'К сожалению, мы не работаем в вашем регионе.',
+            reply_markup=reply_keyboard_remove
+        )
         await state.clear()
         return
 
@@ -87,6 +136,11 @@ async def process_from_address(
     }
     await state.update_data(from_address=from_address_data)
 
+    if to_address_data:
+        to_address = to_address_data['address']
+        await send_order_message(message, from_address, to_address)
+        return
+
     await message.answer(
         'Отправьте адрес назначения.\n\n'
         '<b><em>Примеры корректныx адресов:\n\n'
@@ -94,7 +148,6 @@ async def process_from_address(
         reply_markup=reply_cancel_keyboard,
     )
     await state.set_state(OrderState.to_address)
-
 
 @router.message(OrderState.to_address)
 async def process_to_address(message: types.Message, state: FSMContext):
@@ -116,23 +169,23 @@ async def process_to_address(message: types.Message, state: FSMContext):
             'lon': to_lon
         }
         await state.update_data(to_address=to_address_data)
+        await send_order_message(message, from_address, to_address)
 
     except API2GisError as e:
         await message.answer(str(e))
         return
 
-    await message.answer(
-        '<b>Данные поездки:</b>\n\n'
-        f'<b>Адрес 1:</b> <em>{from_address}</em>\n'
-        f'<b>Адрес 2:</b> <em>{to_address}</em>\n',
-        reply_markup=get_inline_keyboard(
-            buttons={
-                'Все верно ✅': 'create_order',
-                'Указать другой адрес ✍️': 'edit_to_address'
-            },
-            sizes=(1, 1)
-        )
+
+@router.callback_query(F.data == 'edit_from_address')
+async def edit_from_address_callback_handler(
+        callback: types.CallbackQuery,
+        state: FSMContext,
+):
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(
+        'Отправьте новый адрес отправки.'
     )
+    await state.set_state(OrderState.from_address)
 
 
 @router.callback_query(F.data == 'edit_to_address')
@@ -172,7 +225,13 @@ async def create_order_callback_handler(
         'to_longitude': to_address_data['lon'],
     }
 
-    await Order.objects.acreate(**order_data)
+    try:
+       await Order.objects.acreate(**order_data)
+    except API2GisError as e:
+        await callback.message.edit_text(str(e))
+        await state.clear()
+        return
+
     await callback.message.delete()
     await callback.message.answer('<em>Поиск водителей . . .</em>')
     await state.clear()
@@ -200,7 +259,7 @@ async def accept_order_callback_handler(callback: types.CallbackQuery):
     )
 
     if not telegram_user.points:
-        yookassa_payment_response = await create_order_payment(
+        yookassa_payment_response = await create_payment(
             order_id=order_id,
             telegram_user_id=telegram_user.id
         )
@@ -239,7 +298,7 @@ async def send_payment_order_callback_handler(callback: types.CallbackQuery):
     telegram_user = await TelegramUser.objects.aget(
         telegram_id=callback.from_user.id
     )
-    yookassa_payment_response = await create_order_payment(
+    yookassa_payment_response = await create_payment(
         order_id=order_id,
         telegram_user_id=telegram_user.id,
     )
@@ -305,6 +364,10 @@ async def process_points_count_handler(
     else:
         obj_string = 'товар'
         payment_kwargs['product_id'] = obj.id
+        payment_kwargs['metadata'] = {
+            'address': state_data['address'],
+            'phone_number': state_data['phone_number']
+        }
         payment_text = \
             'Оплата товара. После оплаты к вам направиться доставка.\n\n'
 
