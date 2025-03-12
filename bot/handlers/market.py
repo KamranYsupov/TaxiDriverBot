@@ -12,7 +12,8 @@ from bot.keyboards.inline import (
     inline_user_keyboard,
     get_link_button_inline_keyboard
 )
-from bot.keyboards.reply import reply_location_keyboard, reply_contact_keyboard, reply_keyboard_remove
+from bot.keyboards.reply import reply_location_keyboard, reply_contact_keyboard, reply_keyboard_remove, \
+    reply_cancel_keyboard
 from bot.orm.payment import create_payment
 from bot.states.product import ProductState
 from bot.utils.pagination import Paginator, get_pagination_buttons
@@ -105,17 +106,14 @@ async def buy_product_callback_handler(
         reply_markup=None
     )
     await callback.message.answer(
-        'Нажмите на кнопку <b>"Отправить геолокацию 🏬"</b>'
-        'чтобы отправить ваш адресс.\n\n'
-        'Или напишите его вручную в формате <em><b>Город, улица дом</b></em>.',
-        reply_markup=reply_location_keyboard
+        'Напишите ваш адрес в формате <em><b>Город, улица дом</b></em>.',
+        reply_markup=reply_cancel_keyboard,
     )
     await state.set_state(ProductState.address)
 
 
 @router.message(
-    ProductState.address,
-    or_f(F.location, F.text),
+    ProductState.address, F.text
 )
 async def process_address_message_handler(
     message: types.Message,

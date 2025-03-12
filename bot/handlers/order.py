@@ -53,10 +53,8 @@ async def process_order_type_callback_handler(
 
     await callback.message.delete()
     await callback.message.answer(
-        'Нажмите на кнопку <b>"Отправить геолокацию 🏬"</b>'
-        'чтобы отправить ваш адресс.\n\n'
-        'Или напишите его вручную в формате <em><b>Город, улица дом</b></em>.',
-        reply_markup=reply_location_keyboard
+        'Напишите ваш адрес в формате <em><b>Город, улица дом</b></em>.',
+        reply_markup=reply_cancel_keyboard,
     )
     await state.set_state(OrderState.from_address)
 
@@ -87,8 +85,7 @@ async def send_order_message(
 
 
 @router.message(
-    OrderState.from_address,
-    or_f(F.location, F.text)
+    OrderState.from_address, F.text
 )
 async def process_from_address(
         message: types.Message,
