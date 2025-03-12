@@ -4,6 +4,8 @@ x-function: &base_python
   volumes:
     - ./:/app/:rw  
     - poetry-volume:/poetry:delegated
+    - static_dir:/app/web/static/
+    - media_dir:/app/web/media/
   environment: &env-vars
     POETRY_HOME: /poetry
     PYTHONPATH: /app
@@ -33,7 +35,7 @@ x-celery: &base_celery
 services:
   db:
     container_name: ${PROJECT_NAME}_db
-    image: postgres:14.6-alpine
+    image: postgres:latest
     volumes:
       - pg_data:/var/lib/postgresql/data/pgdata:rw
     env_file:
@@ -68,9 +70,6 @@ services:
       context: .
       dockerfile: web.dockerfile
     container_name: ${PROJECT_NAME}_web
-    volumes:
-      - static_dir:/app/web/static/  
-      - media_dir:/app/web/media/ 
 
   bot:
     <<: *base_python
