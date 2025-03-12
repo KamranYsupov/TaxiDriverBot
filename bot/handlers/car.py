@@ -144,8 +144,10 @@ async def process_profile_photo(message: types.Message, state: FSMContext):
             car.profile_photo = ImageFile(profile_photo)
 
             await car.asave()
-            os.remove(front_photo.name)
-            os.remove(profile_photo.name)
+            os.remove(front_photo.name) \
+                if os.path.exists(front_photo.name) else None
+            os.remove(profile_photo.name) \
+                if os.path.exists(profile_photo.name) else None
 
     await state.clear()
     await message.answer_photo(
