@@ -18,12 +18,8 @@ class TelegramUserAdmin(
     NotAllowedToAddMixin,
     admin.ModelAdmin,
 ):
-    readonly_fields = ('rating_display', )
-    exclude = ('reviews', 'last_add_points_date')
+    exclude = ('last_add_points_date', )
 
-    @admin.display(description='Оценка')
-    def rating_display(self, obj):
-        return f'{obj.rating} ⭐' if obj.rating else 'Нет оценки'
 
 
 @admin.register(TaxiDriver)

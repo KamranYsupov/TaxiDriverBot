@@ -5,7 +5,6 @@ from asgiref.sync import sync_to_async
 
 from bot.keyboards.inline import (
     get_inline_keyboard,
-    get_inline_review_telegram_user_keyboard,
     get_inline_review_driver_keyboard
 )
 from bot.utils.bot import edit_text_or_answer
@@ -290,12 +289,6 @@ async def confirm_end_order_callback_handler(callback: types.CallbackQuery):
     await callback.message.edit_text(
         'Заказ завершен ✅',
         reply_markup=None,
-    )
-    await callback.message.answer(
-        'Пожалуйста, оцените пассажира',
-        reply_markup=get_inline_review_telegram_user_keyboard(
-            telegram_user_id=order_telegram_user.id
-        )
     )
 
     await callback.bot.send_message(

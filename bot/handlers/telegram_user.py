@@ -5,7 +5,6 @@ from asgiref.sync import sync_to_async
 
 from bot.keyboards.inline import (
     get_inline_keyboard,
-    get_inline_review_telegram_user_keyboard,
     get_inline_review_driver_keyboard
 )
 from bot.utils.bot import edit_text_or_answer

@@ -1,4 +1,3 @@
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -27,32 +26,8 @@ class AbstractTelegramUser(AsyncBaseModel):
         null=True,
     )
 
-    rating = models.FloatField(
-        _('Рейтинг'),
-        validators=[MinValueValidator(1), MaxValueValidator(5)],
-        null=True,
-        blank=True,
-        db_index=True,
-        default=None
-    )
-    reviews: list = models.JSONField(default=list)
-
     class Meta: 
         abstract = True
-
-    def save(self, *args, **kwargs):
-        self._update_rating()
-        super().save(*args, **kwargs)
-
-    async def asave(self, *args, **kwargs):
-        self._update_rating()
-        await super().asave(*args, **kwargs)
-
-    def _update_rating(self):
-        if not self.reviews:
-            return
-
-        self.rating = round(sum(self.reviews) / len(self.reviews), 1)
 
 
 class TimestampMixin(models.Model):

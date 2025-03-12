@@ -41,15 +41,6 @@ def get_inline_review_driver_keyboard(
     )
 
 
-def get_inline_review_telegram_user_keyboard(
-        telegram_user_id: TelegramUser.id
-) -> InlineKeyboardMarkup:
-    return get_inline_review_keyboard(
-        prefix='user',
-        user_id=telegram_user_id
-    )
-
-
 def get_link_button_inline_keyboard(
         button_text: str,
         url: str

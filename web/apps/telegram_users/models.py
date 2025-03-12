@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -103,6 +104,15 @@ class TaxiDriver(AbstractTelegramUser, TariffMixin):
     passport_data = models.CharField(_('Паспортные данные'), max_length=30)
     passport_photo = models.ImageField(_('Фото паспорта'), upload_to='passports/')
     is_active = models.BooleanField(_('Работает'), default=False)
+    rating = models.FloatField(
+        _('Рейтинг'),
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        null=True,
+        blank=True,
+        db_index=True,
+        default=None
+    )
+    reviews: list = models.JSONField(default=list)
 
     car = models.OneToOneField(
         'telegram_users.Car',
@@ -117,6 +127,20 @@ class TaxiDriver(AbstractTelegramUser, TariffMixin):
 
     def __str__(self):
         return f'Таксист {self.full_name}'
+
+    def save(self, *args, **kwargs):
+        self._update_rating()
+        super().save(*args, **kwargs)
+
+    async def asave(self, *args, **kwargs):
+        self._update_rating()
+        await super().asave(*args, **kwargs)
+
+    def _update_rating(self):
+        if not self.reviews:
+            return
+
+        self.rating = round(sum(self.reviews) / len(self.reviews), 1)
 
 
 class TariffDriverRequest(AsyncBaseModel, TariffMixin, RequestStatusMixin):
