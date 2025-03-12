@@ -50,6 +50,7 @@ def create_payment(
 
     elif product_id:
         obj: Product = Product.objects.get(id=product_id)
+        obj.quantity -= 1
         payment.product = obj
         payment.type = Payment.PRODUCT
         payment_description += 'товара'
@@ -66,6 +67,9 @@ def create_payment(
     metadata['points'] = points
 
     with transaction.atomic():
+        if product_id:
+            obj.save()
+
         payment.save()
         yookassa_payment_response = create_yookassa_payment(
             db_payment_id=payment.id,
@@ -76,5 +80,6 @@ def create_payment(
 
         payment.yookassa_payment_id = yookassa_payment_response.id
         payment.save()
+
 
     return yookassa_payment_response

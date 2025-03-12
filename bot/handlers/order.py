@@ -63,7 +63,6 @@ async def process_order_type_callback_handler(
 
 async def validate_address_city(message: types.Message, from_address: str):
     from_address_city = from_address.split(',')[0]
-    print(from_address_city in settings.ORDER_CITIES)
     return from_address_city in settings.ORDER_CITIES
 
 

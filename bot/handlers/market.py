@@ -73,17 +73,16 @@ async def product_info_callback_handler(
     product_id = callback.data.split('_')[-2]
     marker_page_number = int(callback.data.split('_')[-1])
 
-    product = await Product.objects.aget(id=product_id)
+    product: Product = await Product.objects.aget(id=product_id)
     text = (
         f'<b>{product.name}</b>\n\n'
         f'<em>{product.description}</em>\n\n'
-        f'<b>Цена:</b> <em>{int(product.price)} рублей</em>'
+        f'<b>Цена:</b> <em>{int(product.price)} рублей</em>\n'
+        f'<b>Количество на складе:</b> <em>{product.quantity} шт.</em>'
     )
 
-    buttons = {
-        'Заказать 🛒': f'buy_{product.id}',
-        'Назад 🔙': f'market_{marker_page_number}',
-    }
+    buttons = {'Заказать 🛒': f'buy_{product.id}'} if product.quantity else {}
+    buttons.update({'Назад 🔙': f'market_{marker_page_number}'})
 
     await callback.message.edit_text(
         text,
