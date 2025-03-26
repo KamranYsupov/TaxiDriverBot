@@ -155,7 +155,7 @@ async def process_to_address(message: types.Message, state: FSMContext):
     city = from_address.split(',')[0]
 
     try:
-        to_address, cords = await get_message_address(city, message)
+        to_address, cords = await get_message_address(message, city=city)
         to_lat, to_lon = cords
         to_address_data = {
             'address': to_address,
