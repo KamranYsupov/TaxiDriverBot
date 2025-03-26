@@ -13,6 +13,7 @@ from bot.keyboards.reply import reply_cancel_keyboard, reply_location_keyboard, 
 from bot.orm.payment import create_payment
 from bot.states.order import OrderState
 from bot.states.points import WriteOffPointsState
+from bot.utils.location import get_message_address
 from bot.utils.texts import address_string
 from bot.valiators.taxi_driver import OrderStateValidator
 from web.apps.orders.models import Order, Payment, OrderPriceSettings
@@ -53,7 +54,8 @@ async def process_order_type_callback_handler(
 
     await callback.message.delete()
     await callback.message.answer(
-        'Напишите ваш адрес в формате <em><b>Город, улица дом</b></em>.',
+         'Отправьте вашу геолокацию, или введите адрес вручную '
+         'в формате <em><b>Город, улица дом</b></em>.',
         reply_markup=reply_cancel_keyboard,
     )
     await state.set_state(OrderState.from_address)
@@ -85,32 +87,24 @@ async def send_order_message(
 
 
 @router.message(
-    OrderState.from_address, F.text
+    OrderState.from_address,
+    or_f(F.text, F.location)
 )
 async def process_from_address(
         message: types.Message,
         state: FSMContext
 ):
     state_data = await state.get_data()
-    from_address_input = message.text
     to_address_data = state_data.get('to_address')
-
+    city = None
     if to_address_data:
         city = to_address_data['address'].split(',')[0]
-        from_address_input = f'{city}, {message.text}'
-
-    location = message.location
 
     try:
-        if location:
-            lat, lon = location.latitude, location.longitude
-        else:
-            lat, lon = api_2gis_service.get_cords(from_address_input)
-
-        from_address = api_2gis_service.get_address(lat, lon)
-
+        from_address, cords = await get_message_address(message, city)
+        from_lat, from_lon = cords
     except API2GisError as e:
-        error_msg = str(e) if not location else (
+        error_msg = str(e) if not message.location else (
             'Не получилось распознать ваш адрес по геопозиции(\n\n'
             '<em>Пожалуйста, напишите адрес вручную.</em>'
         )
@@ -127,8 +121,8 @@ async def process_from_address(
 
     from_address_data = {
         'address': from_address,
-        'lat': lat,
-        'lon': lon
+        'lat': from_lat,
+        'lon': from_lon
     }
     await state.update_data(from_address=from_address_data)
 
@@ -138,27 +132,31 @@ async def process_from_address(
         return
 
     await message.answer(
-        'Отправьте адрес назначения.\n\n'
+        'Отправьте геолокацию назначения, или введите адрес вручную.\n\n'
         '<b><em>Примеры корректныx адресов:\n\n'
         f'<blockquote>{address_string}</blockquote></em></b>',
         reply_markup=reply_cancel_keyboard,
     )
     await state.set_state(OrderState.to_address)
 
-@router.message(OrderState.to_address)
+
+@router.message(
+    OrderState.to_address,
+    or_f(F.text, F.location)
+)
 async def process_to_address(message: types.Message, state: FSMContext):
     await message.answer(
         '<em>Анализирую маршрут . . .</em>',
         reply_markup=reply_keyboard_remove,
     )
-    state_data = await state.get_data()
 
+    state_data = await state.get_data()
     from_address = state_data['from_address']['address']
     city = from_address.split(',')[0]
+
     try:
-        to_address_input = f'{city}, {message.text}'
-        to_lat, to_lon = api_2gis_service.get_cords(to_address_input)
-        to_address = api_2gis_service.get_address(to_lat, to_lon)
+        to_address, cords = await get_message_address(city, message)
+        to_lat, to_lon = cords
         to_address_data = {
             'address': to_address,
             'lat': to_lat,
@@ -166,9 +164,12 @@ async def process_to_address(message: types.Message, state: FSMContext):
         }
         await state.update_data(to_address=to_address_data)
         await send_order_message(message, from_address, to_address)
-
     except API2GisError as e:
-        await message.answer(str(e))
+        error_msg = str(e) if not message.location else (
+            'Не получилось распознать адрес по геопозиции(\n\n'
+            '<em>Пожалуйста, напишите адрес вручную.</em>'
+        )
+        await message.answer(error_msg)
         return
 
 

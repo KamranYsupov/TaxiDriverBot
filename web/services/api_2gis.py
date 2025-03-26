@@ -116,8 +116,7 @@ class API2GisService:
 
         return length, duration
 
-
-    def get_address(
+    def get_address_by_cords(
             self,
             lat: float,
             lon: float,
@@ -153,6 +152,14 @@ class API2GisService:
 
         address_string = f'{city}, {street_and_house}'  # Город, Улица, Дом
         return address_string
+
+
+    def find_match_address(
+            self,
+            address: str
+    ) -> Tuple[str, Tuple[int, int]]:
+        cords = self.get_cords(address)
+        return self.get_address_by_cords(*cords), cords
 
 
 api_2gis_service = API2GisService()

@@ -16,6 +16,7 @@ from bot.keyboards.reply import reply_location_keyboard, reply_contact_keyboard,
     reply_cancel_keyboard
 from bot.orm.payment import create_payment
 from bot.states.product import ProductState
+from bot.utils.location import get_message_address
 from bot.utils.pagination import Paginator, get_pagination_buttons
 from web.apps.products.models import Product
 
@@ -106,31 +107,25 @@ async def buy_product_callback_handler(
         reply_markup=None
     )
     await callback.message.answer(
-        'Напишите ваш адрес в формате <em><b>Город, улица дом</b></em>.',
+        'Отправьте вашу геолокацию, или введите ваш адрес вручную '
+        'в формате <em><b>Город, улица дом</b></em>.',
         reply_markup=reply_cancel_keyboard,
     )
     await state.set_state(ProductState.address)
 
 
 @router.message(
-    ProductState.address, F.text
+    ProductState.address,
+    or_f(F.text, F.location)
 )
 async def process_address_message_handler(
     message: types.Message,
     state: FSMContext
 ):
-    location = message.location
-
     try:
-        if location:
-            lat, lon = location.latitude, location.longitude
-        else:
-            lat, lon = api_2gis_service.get_cords(message.text)
-
-        address = api_2gis_service.get_address(lat, lon)
-
+        address, _ = await get_message_address(message)
     except API2GisError as e:
-        error_msg = str(e) if not location else (
+        error_msg = str(e) if not message.location else (
             'Не получилось распознать ваш адрес по геопозиции(\n\n'
             '<em>Пожалуйста, напишите адрес вручную.</em>'
         )
